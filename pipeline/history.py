@@ -38,8 +38,10 @@ def years():
     return list(range(last, config.HISTORY_START_YEAR - 1, -1))
 
 
-def _year_range(y):
-    end = min(date(y, 12, 31), date.today() - timedelta(days=1))
+def _year_range(y, lag_days=1):
+    # ERA5 (archive API) lags real time by about 5 days, so weather requests stop a week back;
+    # the daily job fills the most recent weeks from the forecast API instead.
+    end = min(date(y, 12, 31), date.today() - timedelta(days=lag_days))
     return date(y, 1, 1).isoformat(), end.isoformat()
 
 
@@ -67,7 +69,7 @@ def backfill(client: Client, points: list[dict], states: list[dict]) -> dict:
             todo = [s for s in states if ys not in prog["wx"].get(s["id"], [])]
             for i in range(0, len(todo), BATCH):
                 batch = todo[i:i + BATCH]
-                a, b = _year_range(y)
+                a, b = _year_range(y, lag_days=7)
                 res = client.archive([s["lat"] for s in batch], [s["lon"] for s in batch], daily="precipitation_sum,temperature_2m_max", start_date=a, end_date=b)
                 for s, item in zip(batch, res):
                     d = item.get("daily", {})

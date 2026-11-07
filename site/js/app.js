@@ -430,7 +430,7 @@
       <ol class="small">
         <li><b>Physics forecast.</b> 30-day river-flow forecasts from the Copernicus GloFAS hydrological model for ${(S.data.points || []).length} points along Nigeria's rivers.</li>
         <li><b>Local danger levels.</b> Each point is compared with its own daily record since 2012: above the 90th percentile is <i>Watch</i>, 98th <i>Warning</i>, 99.7th <i>Severe</i>.</li>
-        <li><b>Machine learning.</b> A gradient-boosted tree model, trained on more than a decade of daily river flows plus rainfall anomalies, learns how rivers behave before they flood and gives the chance of each river rising above its Watch or Warning level within 3, 7 and 14 days. It is retrained every month as new data arrives.</li>
+        <li><b>Machine learning.</b> A gradient-boosted tree model, trained on every day of river flow since 2012 plus rainfall anomalies, learns how rivers behave before they flood and gives the chance of each river rising above its Watch or Warning level within 3, 7 and 14 days. It is retrained every month as new data arrives.</li>
         <li><b>Season monitor.</b> Rain and temperature for every state against the same time of year: drought, wet spells, heat stress and the onset of the rains for planting.</li>
       </ol>`;
     if (m && m.leads) {
