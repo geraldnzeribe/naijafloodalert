@@ -98,8 +98,8 @@
     const where = site.name + (site.state ? ", " + site.state : "");
     if (a.level === 0) {
       return lang === "pcm"
-        ? `NaijaFloodAlert – ${where}: No big flood risk for the next 30 days based on river forecast. Rain for next 7 days: about ${a.rain7} mm. Una still dey careful.`
-        : `NaijaFloodAlert – ${where}: No significant flood risk expected in the next 30 days from the river forecast. 7-day rainfall outlook: about ${a.rain7} mm.`;
+        ? `NaijaFloodAlert – ${where}: No big flood risk for now based on river and rain forecast. Rain for next 7 days: about ${a.rain7} mm. Una still dey careful.`
+        : `NaijaFloodAlert – ${where}: No significant flood risk expected from the current river and rainfall forecasts. 7-day rainfall outlook: about ${a.rain7} mm.`;
     }
     const when = a.firstDate ? fmtDate(a.firstDate, lang) : "";
     const peak = a.peakDate ? fmtDate(a.peakDate, lang) : "";

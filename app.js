@@ -48,9 +48,13 @@
     const all = t.map((d, i) => ({ date: d, q: fc.daily.river_discharge[i], qmax: fc.daily.river_discharge_max[i], qmin: fc.daily.river_discharge_min[i] }));
     const forecast = all.filter((d) => d.date >= today());
     const rain = wx ? wx.daily.time.map((d, i) => ({ date: d, mm: wx.daily.precipitation_sum[i] || 0 })) : [];
-    const a = R.assess(forecast, th, rain, site.type);
+    const noRiver = !th.p90 || th.p90 < 50;
+    const a = R.assess(noRiver ? [] : forecast, th, rain, noRiver ? "urban" : site.type);
     return { site, th, all, forecast, rain, a };
   }
+
+  // Sites without a meaningful river channel (no history / tiny flow) are judged on rainfall only.
+  const rainOnly = (r) => !r.th || !r.th.p90 || r.th.p90 < 50;
 
   // ---------- UI: list ----------
   function renderList() {
@@ -66,7 +70,7 @@
       const badge = lvl == null ? '<span class="pill loading">…</span>'
         : lvl < 0 ? '<span class="pill err">No data</span>'
         : `<span class="pill lvl-${lvl}">${R.LEVELS[lvl].en}</span>`;
-      const sub = r && !r.error ? (r.a.peakQ != null ? `Peak ${Math.round(r.a.peakQ).toLocaleString()} m³/s · ${R.fmtDate(r.a.peakDate)}` : "") : esc(s.river);
+      const sub = r && !r.error ? (rainOnly(r) ? `Rainfall-based · ${r.a.rain7} mm next 7 days` : `Peak ${Math.round(r.a.peakQ).toLocaleString()} m³/s · ${R.fmtDate(r.a.peakDate)}`) : esc(s.river);
       return `<li><button class="site ${state.selected === s.id ? "active" : ""}" data-id="${s.id}">
         <span class="sname">${esc(s.name)} <small>${esc(s.state)}</small></span>${badge}
         <span class="ssub">${sub}</span></button></li>`;
@@ -120,20 +124,21 @@
     const { site, a, th } = r;
     const msg = R.message(site, a, state.lang);
     const lvl = R.LEVELS[a.level];
-    const pct = a.ratioToNormal ? Math.round(a.ratioToNormal * 100) : null;
+    const ro = rainOnly(r);
+    const pct = !ro && a.ratioToNormal ? Math.round(a.ratioToNormal * 100) : null;
     $("detail").innerHTML = `
       <div class="d-head">
         <div><h2>${esc(site.name)}, ${esc(site.state)}</h2><p class="muted">${esc(site.river)} · ${site.lat.toFixed(3)}, ${site.lon.toFixed(3)}</p></div>
         <span class="pill big lvl-${a.level}">${lvl.en}</span>
       </div>
       <div class="stats">
-        <div><b>${a.peakQ != null ? Math.round(a.peakQ).toLocaleString() : "–"}</b><span>peak m³/s (30 days)</span></div>
-        <div><b>${a.peakDate ? R.fmtDate(a.peakDate) : "–"}</b><span>expected peak</span></div>
+        <div><b>${!ro && a.peakQ != null ? Math.round(a.peakQ).toLocaleString() : "–"}</b><span>peak m³/s (30 days)</span></div>
+        <div><b>${!ro && a.peakDate ? R.fmtDate(a.peakDate) : "–"}</b><span>expected peak</span></div>
         <div><b>${pct != null ? pct + "%" : "–"}</b><span>of typical flow</span></div>
         <div><b>${a.rain7} mm</b><span>rain next 7 days</span></div>
       </div>
-      <div class="chart-wrap"><canvas id="chart" aria-label="River discharge forecast chart"></canvas></div>
-      <p class="muted small">Dashed lines: this river's own Watch (90th), Warning (98th) and Severe (99.7th percentile) levels from ${th.n.toLocaleString()} days of record since 2010. Shaded band: forecast spread.</p>
+      ${ro ? `<p class="muted">No large river channel at this point, so the alert is based on the rainfall forecast (urban flash-flood risk).</p>` : `<div class="chart-wrap"><canvas id="chart" aria-label="River discharge forecast chart"></canvas></div>
+      <p class="muted small">Dashed lines: this river's own Watch (90th), Warning (98th) and Severe (99.7th percentile) levels from ${th.n.toLocaleString()} days of record since 2010. Shaded band: forecast spread.</p>`}
       <div class="alert-box lvl-border-${a.level}">
         <h3>Ready-to-send alert</h3>
         <p id="msg">${esc(msg)}</p>
@@ -146,7 +151,7 @@
     $("copy").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(msg); $("copy").textContent = "Copied"; } catch (e) { $("copy").textContent = "Copy failed"; }
     });
-    drawChart(r);
+    if (!ro) drawChart(r); else if (state.chart) { state.chart.destroy(); state.chart = null; }
   }
 
   function drawChart(r) {
