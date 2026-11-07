@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NaijaFloodAlert — flood, rain and season watch for Nigeria</title>
+<meta name="description" content="Open, automated flood early warning and season monitor for every Nigerian community: river forecasts, a machine-learning flood model, drought and planting signals, and replays of past floods.">
+<meta name="theme-color" content="#0a2540">
+<meta property="og:title" content="NaijaFloodAlert">
+<meta property="og:description" content="Flood, rain and season watch for every community in Nigeria — updated automatically every day.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="./" aria-label="NaijaFloodAlert home">
+    <img src="icon.svg" alt="" width="34" height="34">
+    <span><b>NaijaFloodAlert</b><small id="tagline">Flood, rain and season watch for every community in Nigeria</small></span>
+  </a>
+  <div class="search">
+    <input id="q" type="search" autocomplete="off" placeholder="Search a town, community or LGA…" aria-label="Search places in Nigeria">
+    <ul id="qres" class="qres" role="listbox" hidden></ul>
+  </div>
+  <div class="bar-right">
+    <select id="lang" aria-label="Language"></select>
+    <span class="live" id="live" title="Data refresh status"><i></i><span id="liveText">Loading…</span></span>
+  </div>
+</header>
+
+<main class="stage">
+  <div id="map" aria-label="Map of Nigeria"></div>
+
+  <div class="mapctl">
+    <div class="seg" id="modes" role="tablist" aria-label="Map layer">
+      <button data-mode="flood" class="on" id="m_flood">Flood risk</button>
+      <button data-mode="season" id="m_season">Season</button>
+      <button data-mode="plant" id="m_plant">Planting</button>
+      <button data-mode="heat" id="m_heat">Heat</button>
+    </div>
+    <div class="seg small" id="bases" aria-label="Base map">
+      <button data-base="streets" class="on">Map</button>
+      <button data-base="topo">Terrain</button>
+      <button data-base="sat">Satellite</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="replaybar" id="replaybar" hidden>
+    <button id="play" class="round" aria-label="Play">▶</button>
+    <div class="rb-mid">
+      <div class="rb-top"><b id="rbDate">—</b><span id="rbCount" class="muted"></span></div>
+      <input type="range" id="rbSlider" min="0" max="364" value="0" aria-label="Day of year">
+    </div>
+    <select id="rbSpeed" aria-label="Speed"><option value="160">1×</option><option value="70" selected>2×</option><option value="25">4×</option></select>
+    <label class="chk"><input type="checkbox" id="rbSat"> Satellite view</label>
+  </div>
+
+  <aside class="panel" id="panel">
+    <button class="grip" id="grip" aria-label="Expand panel"></button>
+    <nav class="tabs" role="tablist">
+      <button data-tab="today" class="on" id="t_today">Today</button>
+      <button data-tab="replay" id="t_replay">Replay</button>
+      <button data-tab="model" id="t_model">Model</button>
+      <button data-tab="about" id="t_about">About</button>
+    </nav>
+    <section class="tab on" id="tab-today"></section>
+    <section class="tab" id="tab-replay"></section>
+    <section class="tab" id="tab-model"></section>
+    <section class="tab" id="tab-about"></section>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

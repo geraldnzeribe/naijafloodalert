@@ -1,7 +1,7 @@
 {
   "name": "NaijaFloodAlert",
   "short_name": "FloodAlert",
-  "description": "Community flood early warning for Nigeria",
+  "description": "Flood, rain and season watch for every community in Nigeria",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f3f6f9",
