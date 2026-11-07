@@ -6,7 +6,7 @@
   const PLANT_COL = { dry_season: "#bfb39a", waiting: "#d9a441", wait_confirm: "#f2b705", plant: "#2e9e5b", harvest: "#8d6e63" };
   const FLOOD_API = "https://flood-api.open-meteo.com/v1/flood";
   const NG_BOUNDS = L.latLngBounds([3.9, 2.4], [14.1, 15.0]);
-  const S = { lang: "en", mode: "flood", data: {}, sel: null, replay: null, charts: {} };
+  const S = { lang: "en", mode: "flood", view: "public", data: {}, sel: null, replay: null, lapse: null, charts: {} };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const store = {
@@ -170,10 +170,26 @@
   }
 
   // ---------- Today tab ----------
+  function viewSwitch() {
+    const t = T();
+    return `<div class="seg views" id="views">${["public", "farmer", "nema"].map((v) => `<button data-view="${v}" class="${S.view === v ? "on" : ""}">${esc(t["view_" + v])}</button>`).join("")}</div>`;
+  }
+  function bindViewSwitch() {
+    document.querySelectorAll("#views button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+  }
+  function setView(v) {
+    S.view = v; store.set("nfa_view", v);
+    S.mode = v === "farmer" ? "plant" : "flood"; syncModeButtons();
+    lgaLayer && lgaLayer.setStyle(lgaStyle); stateLayer && stateLayer.setStyle(stateStyle); renderLegend();
+    renderToday();
+  }
+
   function renderToday() {
     const t = T();
     const el = $("tab-today");
     if (S.sel) return renderPlace(S.sel);
+    if (S.view === "farmer") return renderFarmer();
+    if (S.view === "nema") return renderNema();
     const lt = S.data.latest;
     let html = "";
     const st = S.data.status && S.data.status.last;
@@ -186,14 +202,14 @@
     const states = Object.values((lt && lt.states) || {});
     const drought = states.filter((s) => s.status === "drought" || s.status === "dry").length;
     const plant = states.filter((s) => s.plant === "plant").length;
-    html += `<p class="muted">${esc(t.tagline)}.</p>
+    html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}.</p>
       <div class="cards">
         <div class="card"><b class="big">${atRisk}</b><span>communities (LGAs) at Watch or above, next 30 days</span></div>
         <div class="card"><b class="big">${(S.data.points || []).length}</b><span>river points monitored daily</span></div>
         <div class="card"><b class="big">${drought}</b><span>states drier than normal</span></div>
         <div class="card"><b class="big">${plant}</b><span>states where rains are established</span></div>
       </div>
-      <p class="small muted">Tap any community on the map, search for a town, or zoom in to see local streams.</p>`;
+      <p class="small muted">Tap any community on the map, search for a town, or zoom in to see local streams.</p>` + lagdoCard(false);
     const top = Object.entries((lt && lt.lgas) || {}).filter(([, v]) => v[0] > 0 || v[1] >= 0.3).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]).slice(0, 12);
     html += `<h3>Highest flood risk</h3>`;
     if (!top.length) html += `<p class="muted small">No community is above normal right now${lt ? "" : " (waiting for first forecast)"}.</p>`;
@@ -203,9 +219,100 @@
         Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}</small></span><span class="chip" style="background:${SEASON_COL[s.status] || "#b0bec5"}">${esc(t.season[s.status] || s.status)}</span></li>`).join("") + `</ul>`;
     }
     el.innerHTML = html;
+    bindViewSwitch(); bindLagdo();
     el.querySelectorAll("[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const s = S.data.states.find((x) => x.properties.id === li.dataset.state); if (s) map.fitBounds(L.geoJSON(s).getBounds()); }));
   }
+  function rainBars(days) {
+    if (!days || !days.length) return "";
+    const max = Math.max(20, ...days);
+    const t0 = today();
+    return `<div class="rainbars">${days.map((mm, i) => `<div class="rb"><span style="height:${Math.round(100 * mm / max)}%"></span><b>${Math.round(mm)}</b><small>${esc(fmtDate(addDays(t0, i), { weekday: "short" }))}</small></div>`).join("")}</div>`;
+  }
+
+  function renderFarmer() {
+    const t = T();
+    const lt = S.data.latest || {};
+    const states = Object.entries(lt.states || {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
+    let html = viewSwitch() + `<h2>Farm outlook</h2><p class="muted small">Planting signal, rain and heat for every state, compared with the same time of year since 2012. Tap a state to zoom in, or tap your community on the map.</p>`;
+    if (!states.length) html += `<div class="warmup">Season data appears after the first full daily update.</div>`;
+    const counts = {}; states.forEach(([, s]) => { counts[s.plant] = (counts[s.plant] || 0) + 1; });
+    html += `<div class="cards">${["plant", "wait_confirm", "waiting", "dry_season", "harvest"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big" style="color:${PLANT_COL[k]}">${counts[k]}</b><span>${esc(t.plant[k])}</span></div>`).join("")}</div>`;
+    html += `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
+        <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
+      <p class="small muted">Small bars: rain forecast for the next 7 days.</p>`;
+    const el = $("tab-today"); el.innerHTML = html; bindViewSwitch();
+    el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const f = S.data.states.find((x) => x.properties.id === li.dataset.state); if (f) map.fitBounds(L.geoJSON(f).getBounds()); }));
+  }
+
+  function nemaRows() {
+    const lt = S.data.latest || {};
+    const out = [];
+    Object.entries(lt.lgas || {}).forEach(([lid, v]) => {
+      if (v[0] < 1 && v[1] < 0.3) return;
+      const f = lgaById(lid); if (!f) return;
+      const ids = ((S.data.links || {})[lid] || {}).points || [];
+      const pts = ids.map((id) => latestPoint(id)).filter(Boolean).sort((a, b) => (b.level || 0) - (a.level || 0));
+      const p = pts[0]; const meta = p ? S.data.pointById[p.id] : null;
+      out.push({ lid, name: f.name, state: f.state, level: v[0], ml7: v[1], river: meta ? meta.river : "rainfall", first: p && p.first, peak: p && p.peak_date });
+    });
+    return out.sort((a, b) => b.level - a.level || b.ml7 - a.ml7);
+  }
+
+  function renderNema() {
+    const t = T();
+    const rows = nemaRows();
+    const byLevel = [0, 0, 0, 0]; rows.forEach((r) => byLevel[r.level]++);
+    const byState = {}; rows.filter((r) => r.level >= 1).forEach((r) => { byState[r.state] = (byState[r.state] || 0) + 1; });
+    let html = viewSwitch() + `<h2>Emergency operations view</h2><p class="muted small">Communities (LGAs) ranked by forecast flood level over the next 30 days, then by the machine-learning chance of rising above normal within 7 days.</p>
+      <div class="cards"><div class="card"><b class="big" style="color:${LV_COL[3]}">${byLevel[3]}</b><span>${esc(t.lvl[3])}</span></div><div class="card"><b class="big" style="color:${LV_COL[2]}">${byLevel[2]}</b><span>${esc(t.lvl[2])}</span></div>
+      <div class="card"><b class="big" style="color:${LV_COL[1]}">${byLevel[1]}</b><span>${esc(t.lvl[1])}</span></div><div class="card"><b class="big">${Object.keys(byState).length}</b><span>states affected</span></div></div>
+      <div class="btns"><button class="btn" id="csv">Download CSV</button><button class="btn ghost" id="print">Print bulletin</button></div>` + lagdoCard(true);
+    html += `<h3>At-risk communities</h3>`;
+    if (!rows.length) html += `<p class="muted small">No community is above normal right now.</p>`;
+    else html += `<table class="metrics nema"><tr><th>LGA</th><th>State</th><th>Level</th><th>7-day ML</th><th>From</th></tr>` + rows.slice(0, 80).map((r) => `<tr data-lga="${r.lid}"><td>${esc(r.name)}</td><td>${esc(r.state)}</td><td><span class="chip l${r.level}">${esc(t.lvl[r.level])}</span></td><td>${Math.round(100 * r.ml7)}%</td><td>${r.first ? fmtDate(r.first) : "–"}</td></tr>`).join("") + `</table>`;
+    const el = $("tab-today"); el.innerHTML = html; bindViewSwitch(); bindLagdo();
+    el.querySelectorAll("tr[data-lga]").forEach((tr) => tr.addEventListener("click", () => { const f = lgaById(tr.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
+    $("csv").addEventListener("click", () => {
+      const lines = [["lga", "state", "level", "level_name", "ml_7day_chance", "river", "first_day_above_normal", "peak_date"].join(",")]
+        .concat(rows.map((r) => [r.name, r.state, r.level, t.lvl[r.level], r.ml7, r.river, r.first || "", r.peak || ""].map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")));
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+      a.download = `naijafloodalert_at_risk_${today()}.csv`; a.click();
+    });
+    $("print").addEventListener("click", () => printBulletin(rows));
+  }
+
+  function printBulletin(rows) {
+    const t = T(); const lt = S.data.latest || {};
+    const w = window.open("", "_blank"); if (!w) return;
+    const states = Object.values(lt.states || {}).sort((a, b) => a.name.localeCompare(b.name));
+    w.document.write(`<!doctype html><title>NaijaFloodAlert bulletin ${today()}</title><style>body{font:12px/1.4 Arial,sans-serif;margin:24px;color:#111}h1{font-size:20px;margin:0}table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left}th{background:#f0f3f6}.l1{background:#f2b705}.l2{background:#ef6c00;color:#fff}.l3{background:#d32f2f;color:#fff}small{color:#555}</style>
+      <h1>NaijaFloodAlert — flood &amp; season bulletin</h1><small>Generated ${new Date().toLocaleString("en-GB")} · data updated ${esc((lt.generated || "").replace("T", " "))} UTC · geraldnzeribe.github.io/naijafloodalert</small>
+      <h2>Communities at Watch or above (next 30 days)</h2><table><tr><th>LGA</th><th>State</th><th>Level</th><th>7-day ML chance</th><th>River</th><th>From</th><th>Peak</th></tr>
+      ${rows.filter((r) => r.level >= 1).map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.state)}</td><td class="l${r.level}">${esc(t.lvl[r.level])}</td><td>${Math.round(100 * r.ml7)}%</td><td>${esc(r.river)}</td><td>${r.first || ""}</td><td>${r.peak || ""}</td></tr>`).join("") || `<tr><td colspan="7">None</td></tr>`}</table>
+      <h2>Season by state</h2><table><tr><th>State</th><th>Status</th><th>Rain 30 d (% normal)</th><th>Rain next 7 d</th><th>Planting</th><th>Heat</th></tr>
+      ${states.map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(t.season[s.status] || s.status)}</td><td>${s.rain30 ?? ""} mm (${s.pct_normal30 != null ? Math.round(s.pct_normal30) + "%" : "–"})</td><td>${s.rain_next7 != null ? Math.round(s.rain_next7) + " mm" : ""}</td><td>${esc(t.plant[s.plant] || "")}</td><td>${s.heat ? "Yes" : ""}</td></tr>`).join("")}</table>
+      <p><small>Research and public-information tool; does not replace official warnings from NIHSA, NiMet, NEMA or SEMAs. Emergency: 112.</small></p>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 400);
+  }
+
+  function lagdoCard(always) {
+    const t = T();
+    const lg = S.data.latest && S.data.latest.lagdo;
+    if (!lg || !lg.source || lg.source.q_now == null) return "";
+    const s = lg.source;
+    if (!always && !s.level && !(s.trend7 > 25)) return "";
+    const arr = (lg.targets || []).filter((x) => x.lag_days > 0 && x.corr >= 0.3);
+    return `<div class="lagdo card"><b>${esc(t.lagdo_title)}</b> <span class="chip l${s.level || 0}">${esc(t.lvl[s.level || 0])}</span>
+      <p class="small">River Benue at ${esc(s.name)} (Cameroon): <b>${fmtQ(s.q_now)} m³/s</b>, ${s.pct_of_normal != null ? Math.round(s.pct_of_normal) + "% of typical" : ""}${s.trend7 != null ? `, ${s.trend7 > 0 ? "up" : "down"} ${Math.abs(Math.round(s.trend7))}% in 7 days` : ""}. Watch level ${fmtQ(s.watch)} m³/s.</p>
+      ${arr.length ? `<p class="small">Typical travel time of a rise from here (learned from history): ${arr.map((x) => `${esc(x.name)} ~${x.lag_days} d`).join(" · ")}.</p>` : `<p class="small muted">Travel times appear once enough history is downloaded.</p>`}
+      <button class="btn ghost" id="lagdoGo">Show on map</button></div>`;
+  }
+  function bindLagdo() {
+    const b = $("lagdoGo"); if (!b) return;
+    b.addEventListener("click", () => { const s = S.data.latest.lagdo.source; map.flyTo([s.lat, s.lon], 8); });
+  }
+
   const lgaById = (id) => { const f = (S.data.lgas || []).find((x) => x.properties.id === id); return f ? f.properties : null; };
 
   // ---------- place selection ----------
@@ -248,6 +355,12 @@
       <span class="chip l${a.lv}">${esc(t.lvl[a.lv])}</span></div>
       <div class="alert l${a.lv}"><p id="msg">${esc(msg)}</p>${t.draft ? `<p class="small muted">⚠ ${esc(t.draft)}</p>` : ""}
         <div class="btns"><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">${esc(t.share_wa)}</a><button class="btn ghost" id="copy">${esc(t.copy)}</button></div></div>`;
+    if (S.view === "farmer" && a.season) {
+      const s = a.season;
+      html += `<h3>Farm outlook · ${esc(sel.lga.state)}</h3><p><span class="chip" style="background:${PLANT_COL[s.plant] || "#b0bec5"}">${esc(t.plant[s.plant] || "")}</span></p>
+        <p class="small">${esc((t.farm_tip || {})[s.plant] || "")}</p>${s.heat ? `<p class="small">🔥 ${esc(t.heat_tip)}</p>` : ""}
+        <h4>${esc(t.next7)}</h4>${rainBars(s.rain_days)}${s.dry_run ? `<p class="small muted">${esc(t.dry_run(s.dry_run))}</p>` : ""}`;
+    }
     if (a.main && mp) {
       html += `<h3>${esc(mp.river)} near ${esc(mp.name)}</h3>
         <dl class="kv"><dt>Flow today</dt><dd>${fmtQ(a.main.q_now)} m³/s</dd><dt>Highest in next 30 days</dt><dd>${fmtQ(a.main.peak)} m³/s · ${fmtDate(a.main.peak_date)}</dd>
@@ -261,7 +374,9 @@
     } else {
       html += `<p class="muted small">No large river channel runs through this LGA in the national network, so the alert uses the rainfall forecast. Tap below to analyse the exact spot you selected, including small rivers.</p>`;
     }
-    html += `<div class="btns" style="margin:10px 0"><button class="btn ghost" id="spot">Analyse this exact spot</button></div><div id="spotout"></div>`;
+    html += `<div class="btns" style="margin:10px 0"><button class="btn ghost" id="spot">Analyse this exact spot</button></div><div id="spotout"></div>
+      <h3>Climate time-lapse</h3><p class="small muted">Satellite pictures of this area played as an animation (NASA MODIS). Cloud and image gaps can leave blank frames.</p>
+      <div class="btns"><button class="btn ghost" id="lapseGreen">${esc(t.lapse_green)}</button><button class="btn ghost" id="lapseFlood">${esc(t.lapse_flood)}</button></div>`;
     if (a.season) {
       const s = a.season;
       html += `<h3>${esc(t.mode_season)} · ${esc(sel.lga.state)}</h3>
@@ -280,6 +395,8 @@
     $("back").addEventListener("click", () => { S.sel = null; if (spotMarker) map.removeLayer(spotMarker); renderToday(); });
     $("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(msg); $("copy").textContent = t.copied; } catch (e) { /* ignore */ } });
     $("spot").addEventListener("click", () => analyseSpot(sel.lat, sel.lon));
+    $("lapseGreen").addEventListener("click", () => startLapse("ndvi", sel.lat, sel.lon));
+    $("lapseFlood").addEventListener("click", () => startLapse("flood", sel.lat, sel.lon));
     if (a.main && mp) pointChart("pchart", a.main);
   }
   const fmtQ = (q) => q == null ? "–" : Math.round(q).toLocaleString();
@@ -337,6 +454,61 @@
     }
   }
 
+  // ---------- climate time-lapse (NASA GIBS imagery for one place) ----------
+  function lapseDates(kind) {
+    const out = [];
+    const end = new Date(); end.setUTCDate(end.getUTCDate() - (kind === "ndvi" ? 10 : 2));
+    if (kind === "flood") {
+      for (let i = 59; i >= 0; i -= 2) { const d = new Date(end); d.setUTCDate(d.getUTCDate() - i); out.push(d.toISOString().slice(0, 10)); }
+      return out;
+    }
+    // MODIS 8-day composites start on day-of-year 1, 9, 17, ... of each year.
+    for (let y = end.getUTCFullYear() - 1; y <= end.getUTCFullYear(); y++) {
+      for (let doy = 1; doy <= 361; doy += 8) {
+        const d = new Date(Date.UTC(y, 0, doy));
+        if (d <= end && (end - d) / 864e5 <= 372) out.push(d.toISOString().slice(0, 10));
+      }
+    }
+    return out;
+  }
+  function lapseUrl(kind, date) {
+    return kind === "ndvi"
+      ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`
+      : `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Combined_Flood_2-Day/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+  }
+  function startLapse(kind, lat, lon) {
+    if (S.replay) exitReplay();
+    stopLapse();
+    S.lapse = { kind, dates: lapseDates(kind), i: 0, layer: null, timer: null };
+    map.flyTo([lat, lon], Math.min(Math.max(map.getZoom(), 8), 9), { duration: 0.8 });
+    $("replaybar").hidden = false; document.body.classList.add("replaying", "lapsing");
+    $("panel").classList.remove("full");
+    $("rbSlider").max = S.lapse.dates.length - 1; $("rbSat").parentElement.style.display = "none";
+    $("legend").innerHTML = kind === "ndvi"
+      ? `<b>Vegetation (NDVI)</b><div class="row"><span class="sw" style="background:linear-gradient(90deg,#a0522d,#e8d48a,#9acd32,#006400);width:120px"></span></div><div class="row small muted">brown = dry · green = growing</div><button class="btn ghost" id="lapseStop" style="margin-top:6px">Close time-lapse</button>`
+      : `<b>Flood water (MODIS)</b><div class="row small muted">Shaded pixels = surface water detected beyond normal</div><button class="btn ghost" id="lapseStop" style="margin-top:6px">Close time-lapse</button>`;
+    $("lapseStop").addEventListener("click", stopLapse);
+    lapseFrame(S.lapse.dates.length - 1);
+  }
+  function lapseFrame(i) {
+    const L2 = S.lapse; if (!L2) return;
+    L2.i = Math.max(0, Math.min(L2.dates.length - 1, i));
+    const date = L2.dates[L2.i];
+    $("rbSlider").value = L2.i;
+    $("rbDate").textContent = fmtDate(date, { day: "numeric", month: "long", year: "numeric" });
+    $("rbCount").textContent = L2.kind === "ndvi" ? "8-day vegetation composite" : "2-day flood composite";
+    const next = L.tileLayer(lapseUrl(L2.kind, date), { maxNativeZoom: 9, maxZoom: 18, opacity: 0, attribution: "NASA GIBS / MODIS" }).addTo(map);
+    next.once("load", () => { next.setOpacity(L2.kind === "ndvi" ? 0.85 : 1); if (L2.layer && L2.layer !== next) map.removeLayer(L2.layer); L2.layer = next; });
+    setTimeout(() => { if (S.lapse === L2 && next.options.opacity === 0) { next.setOpacity(L2.kind === "ndvi" ? 0.85 : 1); if (L2.layer && L2.layer !== next) map.removeLayer(L2.layer); L2.layer = next; } }, 2500);
+  }
+  function stopLapse() {
+    if (!S.lapse) return;
+    clearTimeout(S.lapse.timer);
+    map.eachLayer((l) => { if (l._url && l._url.includes("gibs.earthdata") && l !== satLayer) map.removeLayer(l); });
+    S.lapse = null; $("replaybar").hidden = true; document.body.classList.remove("replaying", "lapsing");
+    $("rbSat").parentElement.style.display = ""; $("play").textContent = "▶"; renderLegend();
+  }
+
   // ---------- Replay tab ----------
   function renderReplayTab() {
     const el = $("tab-replay");
@@ -351,6 +523,7 @@
   }
 
   async function loadYear(y) {
+    stopLapse();
     stopPlay();
     document.querySelectorAll("#tab-replay [data-y]").forEach((b) => b.classList.toggle("on", +b.dataset.y === y));
     const doc = await tryJSON(`data/history/${y}.json`);
@@ -402,6 +575,13 @@
     satLayer.bringToBack(); Object.values(bases).forEach((b) => b.bringToBack());
   }
   function togglePlay() {
+    if (S.lapse) {
+      if (S.lapse.timer) { clearTimeout(S.lapse.timer); S.lapse.timer = null; $("play").textContent = "▶"; return; }
+      $("play").textContent = "❚❚";
+      if (S.lapse.i >= S.lapse.dates.length - 1) S.lapse.i = -1;
+      const stepL = () => { if (!S.lapse) return; if (S.lapse.i >= S.lapse.dates.length - 1) { $("play").textContent = "▶"; S.lapse.timer = null; return; } lapseFrame(S.lapse.i + 1); S.lapse.timer = setTimeout(stepL, Math.max(450, +$("rbSpeed").value * 6)); };
+      stepL(); return;
+    }
     if (!S.replay) return;
     if (S.replay.timer) return stopPlay();
     $("play").textContent = "❚❚";
@@ -521,6 +701,8 @@
 
   async function init() {
     S.lang = store.get("nfa_lang", "en");
+    S.view = store.get("nfa_view", "public");
+    if (S.view === "farmer") S.mode = "plant";
     const shortLang = window.innerWidth <= 860;
     $("lang").innerHTML = I.langs.map((k) => `<option value="${k}" title="${I.L[k]._name}">${shortLang ? k.toUpperCase() : I.L[k]._name}</option>`).join("");
     $("lang").value = S.lang;
@@ -532,7 +714,8 @@
     }));
     $("grip").addEventListener("click", () => $("panel").classList.toggle("full"));
     $("play").addEventListener("click", togglePlay);
-    $("rbSlider").addEventListener("input", (e) => { stopPlay(); setDay(+e.target.value); });
+    $("rbClose").addEventListener("click", () => { if (S.lapse) stopLapse(); else if (S.replay) exitReplay(); });
+    $("rbSlider").addEventListener("input", (e) => { if (S.lapse) { clearTimeout(S.lapse.timer); S.lapse.timer = null; $("play").textContent = "▶"; return lapseFrame(+e.target.value); } stopPlay(); setDay(+e.target.value); });
     $("rbSat").addEventListener("change", (e) => { if (e.target.checked && S.replay) showSat(addDays(S.replay.doc.start, S.replay.day)); else if (satLayer) { map.removeLayer(satLayer); satLayer = null; } });
     initMap();
     initSearch();

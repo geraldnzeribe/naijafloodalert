@@ -90,7 +90,8 @@ def run_test():
                 old = getattr(mod, name)
                 setattr(mod, name, Path(str(old).replace(str(ROOT), str(tmp))))
     # keep the test quick: only the first 25 candidates
-    cands = network.candidates()[:25]
+    allc = network.candidates()
+    cands = allc[:25] + allc[-3:]
     network.candidates = lambda: cands
     from pipeline import om
     real_client = om.Client
@@ -106,6 +107,7 @@ def run_test():
     assert all("level" in p for p in latest["points"]), "every point scored"
     assert len(latest["states"]) >= 30, len(latest["states"])
     assert len(latest["lgas"]) == 774
+    assert (config.DATA / "lga_links.json").exists(), "lga links survive a second run"
     assert idx and idx[0]["year"] == config.HISTORY_START_YEAR
     m = latest["model"]
     assert m and m["leads"], "model trained"
@@ -113,6 +115,11 @@ def run_test():
     print("points", len(pts), "| levels", status["last"]["levels"], "| years", [i["year"] for i in idx])
     print("model leads:", {k: {t: (v["auc"], v["baseline"]["auc"]) for t, v in d.items()} for k, d in m["leads"].items()})
     print("sample state:", next(iter(latest["states"].values())))
+    lg = latest.get("lagdo")
+    assert lg and lg.get("targets"), lg
+    print("lagdo:", lg["source"].get("name"), [(t["name"], t["lag_days"], t["corr"]) for t in lg["targets"]])
+    st = next(iter(latest["states"].values()))
+    assert "dry_run" in st and st.get("rain_days") is not None, st
     print("PIPELINE TEST PASSED")
     return tmp
 

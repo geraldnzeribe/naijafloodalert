@@ -28,6 +28,19 @@ window.NFA_I18N = (function () {
       share_wa: "Share on WhatsApp", copy: "Copy", copied: "Copied",
       chance: "Chance of rising above normal", in_days: (n) => `in ${n} days`,
       draft: "",
+      view_public: "Public", view_farmer: "Farmer", view_nema: "Emergency",
+      dry_run: (n) => `${n} dry day${n === 1 ? "" : "s"} in a row`,
+      next7: "Rain, next 7 days",
+      farm_tip: {
+        dry_season: "Use this time for land clearing, soil preparation and buying inputs. Avoid planting rain-fed crops yet.",
+        waiting: "Rains have not settled. Planting now risks losing seed to a dry spell. Wait for steady rain.",
+        wait_confirm: "Rains have started. Wait a few more days of steady rain before planting rain-fed crops.",
+        plant: "Rains are established. Good window for planting; watch for dry spells longer than a week.",
+        harvest: "Rains are ending. Plan harvesting, drying and storage; prepare for dry-season farming where water allows.",
+      },
+      heat_tip: "Heat stress: give livestock shade and water, irrigate in the early morning or evening, and avoid hard work at midday.",
+      lapse_green: "Dry season ↔ green (12 months)", lapse_flood: "Flood water (last 60 days)",
+      lagdo_title: "Lagdo Dam / upper Benue watch",
     },
     pcm: {
       _name: "Pidgin",
@@ -135,7 +148,8 @@ window.NFA_I18N = (function () {
     },
   };
 
-  function t(lang) { return L[lang] || L.en; }
+  // Newer strings are English-only for now; other languages fall back to English for them.
+  function t(lang) { return lang === "en" || !L[lang] ? L.en : Object.assign({}, L.en, L[lang]); }
 
   function message(lang, place, river, a) {
     const T = t(lang);

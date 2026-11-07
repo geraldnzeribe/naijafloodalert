@@ -18,6 +18,9 @@ NaijaFloodAlert is an open, self-running system. Three times a day a GitHub Acti
 - **Season monitor (useful all year).** For every state: drought, drier than normal, normal, wetter, very wet or dry season; heat stress; and a **planting signal** that detects the real onset of the rains.
 - **Replay past floods.** Pick a year (2012 onwards, including 2012, 2018, 2022 and 2024), press play and watch rivers across Nigeria rise and fall day by day. Optional NASA satellite imagery for each date.
 - **Analyse an exact spot.** Tap anywhere; the browser finds the nearest river channel and checks it against its 14-year record, including small rivers.
+- **Three views: Public, Farmer, Emergency.** Farmers get the planting signal, a 7-day rain outlook with bars, dry-spell count and heat advice for their place. The Emergency view ranks every at-risk LGA, downloads a CSV and prints a one-page bulletin for NEMA, SEMAs and relief teams.
+- **Lagdo Dam / upper Benue watch.** River Benue flow just below Lagdo Dam in Cameroon, compared with its own record, with downstream travel times to Yola, Makurdi and Lokoja learned from the history itself (cross-correlation), not guessed.
+- **Climate time-lapse for any place.** Play 12 months of NASA MODIS vegetation (dry season to green season and back) or the last 60 days of MODIS flood water over the community you picked.
 - **Alerts in five languages.** English, Nigerian Pidgin, Hausa, Yorùbá and Igbo, ready to share on WhatsApp. Hausa, Yorùbá and Igbo are drafts awaiting native-speaker review (see [TRANSLATIONS.md](TRANSLATIONS.md)).
 
 ## How it works

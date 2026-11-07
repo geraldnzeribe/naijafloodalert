@@ -137,6 +137,11 @@ def assess_state(rows: dict, lat: float, today: date, forecast7: float | None):
     t_anom = float(t7[last] - ct7[d]) if np.isfinite(t7[last]) and np.isfinite(ct7[d]) else None
     heat = bool((t_anom is not None and t_anom >= 2.0) or (np.isfinite(t7[last]) and t7[last] >= 40))
     o_status, o_date = onset(full_dates, rain, lat, today)
+    dry_run = 0
+    for v in rain[:last + 1][::-1]:
+        if np.isfinite(v) and v >= DRY_DAY_MM:
+            break
+        dry_run += 1
     if not in_rainy and o_status in ("waiting", "not_started"):
         plant = "dry_season"
     elif o_status == "established" and in_rainy:
@@ -154,7 +159,7 @@ def assess_state(rows: dict, lat: float, today: date, forecast7: float | None):
         "tmax7": _r(t7[last]), "tmax_anom": _r(t_anom), "heat": heat,
         "status": classify(rank90, rank30, normal30, in_rainy),
         "rain_next7": _r(forecast7),
-        "onset": o_date.isoformat() if o_date else None, "plant": plant,
+        "onset": o_date.isoformat() if o_date else None, "plant": plant, "dry_run": int(dry_run),
     }
 
 

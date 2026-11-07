@@ -136,3 +136,26 @@ table.metrics th:first-child, table.metrics td:first-child { text-align: left; }
   .replaybar { left: 10px; right: 10px; transform: none; width: auto; bottom: calc(42vh + 10px); border-radius: 16px; flex-wrap: wrap; }
   .chk { display: none; }
 }
+
+/* views, farmer, emergency, Lagdo */
+.views { margin: 0 0 12px; }
+.rainbars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 80px; margin: 6px 0 4px; }
+.rainbars .rb { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: .7rem; }
+.rainbars .rb span { width: 70%; min-height: 2px; background: linear-gradient(#29a3e0, #1452a8); border-radius: 4px 4px 0 0; }
+.rainbars .rb b { font-size: .72rem; margin-top: 2px; }
+.rainbars .rb small { color: var(--muted); }
+.list.farm li { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
+.list.farm .nm { display: flex; flex-direction: column; }
+.list.farm .nm small { color: var(--muted); font-size: .72rem; }
+.mini { display: inline-flex; gap: 2px; align-items: end; height: 26px; flex: none; }
+.mini i { width: 5px; min-height: 1px; background: #29a3e0; border-radius: 2px 2px 0 0; display: block; }
+.lagdo { margin: 12px 0; border-left: 4px solid #1452a8; }
+.lagdo p { margin: 6px 0; }
+table.nema tr[data-lga] { cursor: pointer; }
+table.nema tr[data-lga]:hover td { background: var(--card2); }
+.round.ghost { background: var(--card2); color: var(--ink); width: 34px; height: 34px; font-size: .85rem; }
+@media (max-width: 860px) {
+  body.lapsing .legend { display: block; top: 118px; bottom: auto; left: 10px; max-width: 200px; }
+  body.lapsing .legend .btn { display: none; }
+}
+.card .chip { color: #fff; } .card .chip.l1 { color: #2a2100; }

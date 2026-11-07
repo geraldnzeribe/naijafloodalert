@@ -27,6 +27,14 @@ MANUAL = [
     ("Niger (Patani)", 5.23, 6.19), ("Benue (Makurdi)", 7.74, 8.53), ("Nun River (Yenagoa)", 4.93, 6.26),
 ]
 
+# Upstream of Nigeria on the Benue: releases from Lagdo Dam (Cameroon) drive many Benue floods.
+# Appended last so existing candidate ids never change.
+UPSTREAM = [
+    ("River Benue", 9.10, 13.65, "Lagdo Dam outflow", "Cameroon"),
+    ("River Benue", 9.30, 13.40, "Garoua", "Cameroon"),
+    ("River Benue", 9.30, 12.90, "Benue entering Nigeria", "Cameroon/Adamawa border"),
+]
+
 SNAP_FILE = config.CACHE / "snap.json"
 POINTS_FILE = config.DATA / "points.json"
 SNAP_WINDOW = ("2022-09-20", "2022-10-20")   # peak of the 2022 flood
@@ -34,8 +42,8 @@ SNAP_WINDOW = ("2022-09-20", "2022-10-20")   # peak of the 2022 flood
 
 def candidates():
     ne = json.loads((config.PIPE / "geo" / "ne_river_points.json").read_text())
-    out = [(n, lat, lon) for n, lat, lon in ne] + MANUAL
-    return [{"cid": f"c{i:03d}", "river": n, "lat": lat, "lon": lon} for i, (n, lat, lon) in enumerate(out)]
+    out = [(n, lat, lon, None, None) for n, lat, lon in ne] + [(n, lat, lon, None, None) for n, lat, lon in MANUAL] + UPSTREAM
+    return [{"cid": f"c{i:03d}", "river": n, "lat": lat, "lon": lon, "label": lab, "region": reg} for i, (n, lat, lon, lab, reg) in enumerate(out)]
 
 
 def _load(path, default):
@@ -91,11 +99,15 @@ def build_points(snaps: dict):
         if props is None:
             props = min(shapes, key=lambda t: t[1].distance(p))[0]
         pts.append({
-            "id": f"p{len(pts):03d}", "name": props["name"], "state": props["state"], "lga": props["id"],
+            "id": f"p{len(pts):03d}", "name": c.get("label") or props["name"], "state": c.get("region") or props["state"], "lga": props["id"],
             "river": c["river"], "lat": s["lat"], "lon": s["lon"], "peak2022": s["peak2022"],
+            **({"upstream": True} if c.get("label") else {}),
         })
     config.DATA.mkdir(parents=True, exist_ok=True)
-    POINTS_FILE.write_text(json.dumps(pts, separators=(",", ":")))
+    new = json.dumps(pts, separators=(",", ":"))
+    if not POINTS_FILE.exists() or POINTS_FILE.read_text() != new:
+        (config.DATA / "lga_links.json").unlink(missing_ok=True)   # rebuilt for the new network
+        POINTS_FILE.write_text(new)
     return pts
 
 

@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
-from . import config, history, model, season, store
+from . import config, history, lagdo, model, season, store
 from .om import BudgetExhausted, Client
 
 BATCH = 10
@@ -59,7 +59,10 @@ def fetch_state_weather(client: Client, states):
             past = {t[k]: [pr[k], tx[k]] for k in range(len(t)) if t[k] < today}
             store.merge(history.WX_DIR / f"{s['id']}.csv", ["rain", "tmax"], past)
             fut = [pr[k] or 0 for k in range(len(t)) if t[k] >= today][:7]
-            out[s["id"]] = {"rain_next7": float(sum(fut)), "tmax_next7": max([tx[k] for k in range(len(t)) if t[k] >= today and tx[k] is not None] or [None]) if t else None}
+            tfut = [tx[k] for k in range(len(t)) if t[k] >= today][:7]
+            out[s["id"]] = {"rain_next7": float(sum(fut)), "rain_days": [round(x, 1) for x in fut],
+                            "tmax_days": [None if x is None else round(x, 1) for x in tfut],
+                            "tmax_next7": max([x for x in tfut if x is not None] or [None])}
     return out
 
 
@@ -105,9 +108,13 @@ def run(client: Client, points):
     state_status = {}
     for s in states:
         rows = history.load_wx(s["id"])
-        st = season.assess_state(rows, s["lat"], today, wx.get(s["id"], {}).get("rain_next7"))
+        w = wx.get(s["id"], {})
+        st = season.assess_state(rows, s["lat"], today, w.get("rain_next7"))
         if st:
             st["name"] = s["name"]
+            st["rain_days"] = w.get("rain_days")
+            st["tmax_days"] = w.get("tmax_days")
+            st["dry_next7"] = sum(1 for x in (w.get("rain_days") or []) if x < 1.0) if w.get("rain_days") else None
             state_status[s["id"]] = st
 
     # ML probabilities.
@@ -172,9 +179,13 @@ def run(client: Client, points):
         ml = max([by_id[pid].get("ml", {}).get("7", {}).get("watch", 0) for pid in info["points"] if pid in by_id] or [0])
         lga_out[lid] = [lv, round(ml, 2)]
 
+    try:
+        lag = lagdo.summary(points, flood, th, fc, today)
+    except Exception as e:     # the tracker must never break the daily update
+        lag = {"error": repr(e)[:200]}
     generated = datetime.now(timezone.utc).isoformat(timespec="minutes")
     latest = {"generated": generated, "date": today.isoformat(), "points": pts_out, "states": state_status, "lgas": lga_out,
-              "model": model.metrics()}
+              "model": model.metrics(), "lagdo": lag}
     (config.DATA / "latest.json").write_text(json.dumps(latest, separators=(",", ":")))
     return latest
 

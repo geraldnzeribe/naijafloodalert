@@ -39,10 +39,13 @@ def _main():
     if pts:
         # Today's forecasts are fetched once per day; keep budget for them on the first run.
         try:
-            already = json.loads((config.DATA / "latest.json").read_text()).get("date") == date.today().isoformat()
+            prev = json.loads((config.DATA / "latest.json").read_text())
         except (FileNotFoundError, json.JSONDecodeError):
-            already = False
-        reserve = 0 if already else 1200
+            prev = {}
+        already = prev.get("date") == date.today().isoformat()
+        # A grown network (new points snapped today) also needs a fresh daily update.
+        same_network = len(prev.get("points", [])) == len(pts) and (config.DATA / "lga_links.json").exists()
+        reserve = 0 if (already and same_network) else 1200
         client.budget -= reserve
         bf = history.backfill(client, pts, states)
         client.budget += reserve
@@ -63,8 +66,8 @@ def _main():
             m = model.train(valid, flood, th, rain, start, end)
             log["trained"] = {k: v for k, v in m.items() if k != "leads"}
         trained_now = "trained" in log
-        if already and not trained_now:
-            latest = json.loads((config.DATA / "latest.json").read_text())
+        if already and same_network and not trained_now:
+            latest = prev
         else:
             latest = daily.run(client, pts)
         log["levels"] = {str(k): sum(1 for p in latest["points"] if p.get("level") == k) for k in range(4)}
