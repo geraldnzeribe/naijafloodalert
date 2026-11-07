@@ -1,0 +1,22 @@
+{
+ "runs": [
+  {
+   "t": "2026-11-07T19:00+00:00",
+   "calls": 2989,
+   "points": 0
+  }
+ ],
+ "last": {
+  "started": "2026-11-07T18:54+00:00",
+  "network_complete": false,
+  "points": 0,
+  "api_calls_used": 2989,
+  "finished": "2026-11-07T19:00+00:00"
+ },
+ "badge": {
+  "schemaVersion": 1,
+  "label": "data updated",
+  "message": "2026-11-07",
+  "color": "1565c0"
+ }
+}
