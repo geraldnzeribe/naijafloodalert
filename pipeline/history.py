@@ -70,6 +70,8 @@ def backfill(client: Client, points: list[dict], states: list[dict]) -> dict:
             for i in range(0, len(todo), BATCH):
                 batch = todo[i:i + BATCH]
                 a, b = _year_range(y, lag_days=7)
+                if b < a:      # first days of January: nothing archived yet this year
+                    break
                 res = client.archive([s["lat"] for s in batch], [s["lon"] for s in batch], daily="precipitation_sum,temperature_2m_max", start_date=a, end_date=b)
                 for s, item in zip(batch, res):
                     d = item.get("daily", {})

@@ -19,6 +19,15 @@ from .om import Client
 
 
 def main():
+    try:
+        return _main()
+    except Exception as e:   # never leave the site without a status; the error shows on GitHub Actions too
+        _write_status({"started": datetime.now(timezone.utc).isoformat(timespec="minutes"), "error": repr(e)[:500],
+                       "finished": datetime.now(timezone.utc).isoformat(timespec="minutes"), "points": len(network.points()), "api_calls_used": 0})
+        raise
+
+
+def _main():
     client = Client()
     log = {"started": datetime.now(timezone.utc).isoformat(timespec="minutes")}
     complete = network.snap_all(client)
@@ -63,6 +72,12 @@ def main():
         log["history_years"] = [i["year"] for i in idx]
     log["api_calls_used"] = round(client.used)
     log["finished"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+    _write_status(log)
+    print(json.dumps(log, indent=1))
+    return 0
+
+
+def _write_status(log):
     status_file = config.DATA / "status.json"
     try:
         prev = json.loads(status_file.read_text())
@@ -71,9 +86,8 @@ def main():
     prev["last"] = log
     prev["runs"] = ([{"t": log["finished"], "calls": log["api_calls_used"], "points": log["points"]}] + prev.get("runs", []))[:60]
     prev["badge"] = {"schemaVersion": 1, "label": "data updated", "message": log["finished"][:10], "color": "1565c0"}
+    status_file.parent.mkdir(parents=True, exist_ok=True)
     status_file.write_text(json.dumps(prev, indent=1))
-    print(json.dumps(log, indent=1))
-    return 0
 
 
 if __name__ == "__main__":

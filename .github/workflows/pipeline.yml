@@ -37,6 +37,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run the pipeline (fetch data, back-fill history, train, score)
+        # Progress is saved as it goes, so even a partial run is committed and deployed.
+        continue-on-error: true
         run: python -m pipeline.run
 
       - name: Save new data to the repository
