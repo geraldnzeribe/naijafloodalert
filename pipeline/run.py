@@ -37,18 +37,19 @@ def _main():
     states = daily._states()
 
     if pts:
-        # Today's forecasts are fetched once per day; keep budget for them on the first run.
+        # 1) Today's forecast comes first, so the map is never empty because history used the quota.
         try:
             prev = json.loads((config.DATA / "latest.json").read_text())
         except (FileNotFoundError, json.JSONDecodeError):
             prev = {}
-        already = prev.get("date") == date.today().isoformat()
-        # A grown network (new points snapped today) also needs a fresh daily update.
-        same_network = len(prev.get("points", [])) == len(pts) and (config.DATA / "lga_links.json").exists()
-        reserve = 0 if (already and same_network) else 1200
-        client.budget -= reserve
+        fresh = (prev.get("date") == date.today().isoformat()
+                 and len(prev.get("points", [])) == len(pts)
+                 and any(p.get("q") for p in prev.get("points", []))
+                 and (config.DATA / "lga_links.json").exists())
+        latest = prev if fresh else daily.run(client, pts)
+        log["daily"] = "reused" if fresh else "fetched"
+        # 2) History with whatever budget is left.
         bf = history.backfill(client, pts, states)
-        client.budget += reserve
         log["backfill"] = bf
         if model.needs_training(bf["complete_years_flood"]):
             start = date(config.HISTORY_START_YEAR, 1, 1)
@@ -65,11 +66,9 @@ def _main():
             valid = [p for p in pts if th.get(p["id"])]
             m = model.train(valid, flood, th, rain, start, end)
             log["trained"] = {k: v for k, v in m.items() if k != "leads"}
-        trained_now = "trained" in log
-        if already and same_network and not trained_now:
-            latest = prev
-        else:
-            latest = daily.run(client, pts)
+        # 3) Re-score today's data with the new history (no extra API calls).
+        if bf["flood_chunks"] or bf["wx_chunks"] or "trained" in log:
+            latest = daily.rescore(pts)
         log["levels"] = {str(k): sum(1 for p in latest["points"] if p.get("level") == k) for k in range(4)}
         idx = daily.build_history_files(pts)
         log["history_years"] = [i["year"] for i in idx]

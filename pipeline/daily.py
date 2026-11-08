@@ -89,16 +89,39 @@ def lga_links(points):
     return out
 
 
+TODAY_FILE = config.CACHE / "today_forecast.json"
+
+
 def run(client: Client, points):
-    today = date.today()
+    """Fetch today's forecasts (about 950 weighted API calls) and score everything."""
     states = _states()
-    states_geo = json.loads((config.DATA / "geo" / "states.geojson").read_text())["features"]
     fc, wx = {}, {}
     try:
         fc = fetch_point_forecasts(client, points)
         wx = fetch_state_weather(client, states)
     except BudgetExhausted:
         pass
+    if fc or wx:
+        TODAY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        TODAY_FILE.write_text(json.dumps({"date": date.today().isoformat(), "fc": fc, "wx": wx}, separators=(",", ":")))
+    return score(points, fc, wx)
+
+
+def rescore(points):
+    """Re-score today's saved forecasts against the (now longer) history. No API calls."""
+    try:
+        d = json.loads(TODAY_FILE.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        d = {}
+    if d.get("date") != date.today().isoformat():
+        d = {}
+    return score(points, d.get("fc", {}), d.get("wx", {}))
+
+
+def score(points, fc, wx):
+    today = date.today()
+    states = _states()
+    states_geo = json.loads((config.DATA / "geo" / "states.geojson").read_text())["features"]
 
     # Thresholds from each point's own record.
     flood = {p["id"]: history.load_flood(p["id"]) for p in points}

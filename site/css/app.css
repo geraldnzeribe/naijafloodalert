@@ -57,7 +57,7 @@ body.replaying .legend { bottom: 96px; }
 .legend .sw { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 auto; }
 
 /* ---------- side panel ---------- */
-.panel { position: absolute; z-index: 1100; top: 12px; right: 12px; bottom: 12px; width: 420px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(6px); }
+.panel { position: absolute; z-index: 1100; top: 12px; right: 12px; bottom: 12px; width: 420px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
 .grip { display: none; }
 .tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
 .tabs button { flex: 1; border: 0; background: none; padding: 10px 6px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; }
@@ -127,8 +127,14 @@ table.metrics th:first-child, table.metrics td:first-child { text-align: left; }
   .bar select { width: 64px; padding: 0 4px; }
   .mapctl { left: 10px; right: 10px; top: 10px; }
   .seg { max-width: 100%; overflow-x: auto; }
-  .panel { left: 0; right: 0; bottom: 0; top: auto; width: auto; height: 42vh; border-radius: 18px 18px 0 0; transition: height .25s; }
-  .panel.full { height: calc(100% - 70px); }
+  /* Fixed-height sheet moved with transform only: no layout or map repaint while it animates. */
+  .panel { left: 0; right: 0; bottom: 0; top: auto; width: auto; height: calc(100% - 70px); border-radius: 18px 18px 0 0;
+    backdrop-filter: none; transform: translateY(calc(100% - 42vh)); transition: transform .22s cubic-bezier(.2,.8,.2,1); will-change: transform; touch-action: pan-y; }
+  .panel.full { transform: translateY(0); }
+  .panel.min { transform: translateY(calc(100% - 118px)); }
+  .panel.dragging { transition: none; }
+  .panel .tabs, .grip { touch-action: none; }
+  .panel:not(.full) .tab { padding-bottom: calc(100vh - 42vh - 40px); }
   .grip { display: block; width: 100%; height: 18px; border: 0; background: none; cursor: pointer; position: relative; }
   .grip::after { content: ""; position: absolute; left: 50%; top: 7px; width: 42px; height: 5px; border-radius: 3px; background: var(--line); transform: translateX(-50%); }
   .tab { padding: 10px 16px 24px; }
@@ -159,3 +165,9 @@ table.nema tr[data-lga]:hover td { background: var(--card2); }
   body.lapsing .legend .btn { display: none; }
 }
 .card .chip { color: #fff; } .card .chip.l1 { color: #2a2100; }
+
+.toast { position: absolute; z-index: 1300; left: 50%; top: 120px; transform: translate(-50%, -6px); max-width: min(92vw, 460px); background: var(--brand); color: #fff;
+  padding: 10px 14px; border-radius: 12px; box-shadow: var(--shadow); font-size: .82rem; line-height: 1.35; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.legend .nodata { margin-top: 6px; color: var(--ink2); max-width: 230px; }
+@media (min-width: 861px) { .toast { top: 76px; left: calc(50% - 210px); } }

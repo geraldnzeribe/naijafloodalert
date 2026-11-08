@@ -105,7 +105,7 @@
       return c && c !== "." ? +c : null;
     }
     const r = latestPoint(p.id);
-    return r ? (r.level ?? 0) : null;
+    return r && r.th && r.q && r.q.length ? (r.level ?? 0) : null;
   }
   function drawPoints() {
     if (pointLayer) map.removeLayer(pointLayer);
@@ -132,6 +132,37 @@
   const latestPoint = (id) => (S.data.latestById || {})[id];
 
   // ---------- legend ----------
+  function dataReady(mode) {
+    const lt = S.data.latest || {};
+    if (mode === "flood") return (lt.points || []).some((p) => p.th && p.q && p.q.length);
+    const st = Object.values(lt.states || {});
+    if (mode === "season") return st.some((s) => s.status && s.status !== "unknown");
+    if (mode === "heat") return st.some((s) => s.tmax_anom != null);
+    return st.length > 0;
+  }
+  function notReadyText(mode) {
+    const b = (S.data.status && S.data.status.last && S.data.status.last.backfill) || {};
+    const yrs = mode === "flood" ? b.complete_years_flood : b.complete_years_wx;
+    const need = mode === "plant" ? 1 : mode === "flood" ? 3 : 2;
+    return `Still downloading the history this map is compared against (${(yrs || 0).toFixed(1)} of ${need} years needed). It fills in automatically, usually within ${mode === "flood" ? "two days" : "a day"}.`;
+  }
+  let toastTimer = null;
+  function toast(html) {
+    const el = $("toast"); if (!el) return;
+    el.innerHTML = html; el.hidden = false; el.classList.add("on");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.classList.remove("on"); setTimeout(() => { el.hidden = true; }, 250); }, 3800);
+  }
+  function setMode(m) {
+    S.mode = m; syncModeButtons();
+    lgaLayer && lgaLayer.setStyle(lgaStyle); stateLayer && stateLayer.setStyle(stateStyle); recolorPoints(); renderLegend();
+    const t = T();
+    const name = t["mode_" + m] || m;
+    toast(dataReady(m) ? `<b>${esc(name)}</b> · ${esc(modeHint(m))}` : `<b>${esc(name)}</b> · ${esc(notReadyText(m))}`);
+  }
+  function modeHint(m) {
+    return { flood: "coloured areas are communities at risk in the next 30 days", season: "each state compared with its normal rain for this time of year", plant: "has the rainy season properly started in each state?", heat: "this week's top temperatures compared with normal" }[m];
+  }
+
   function renderLegend() {
     const t = T();
     let html = "";
@@ -139,6 +170,7 @@
     if (S.mode === "season") html = `<b>${esc(t.mode_season)}</b>` + Object.keys(SEASON_COL).filter((k) => k !== "unknown").map((k) => `<div class="row"><span class="sw" style="background:${SEASON_COL[k]}"></span>${esc(t.season[k])}</div>`).join("");
     if (S.mode === "plant") html = `<b>${esc(t.mode_plant)}</b>` + Object.keys(PLANT_COL).map((k) => `<div class="row"><span class="sw" style="background:${PLANT_COL[k]}"></span>${esc(t.plant[k])}</div>`).join("");
     if (S.mode === "heat") html = `<b>${esc(t.mode_heat)}</b>` + [["#b71c1c", "+3 °C or more"], ["#e53935", "+2 to +3 °C"], ["#fb8c00", "+1 to +2 °C"], ["#ffe0b2", "near normal"], ["#64b5f6", "cooler than normal"]].map(([c, n]) => `<div class="row"><span class="sw" style="background:${c}"></span>${n}</div>`).join("") + `<div class="row muted small">7-day max temperature vs normal</div>`;
+    if (!dataReady(S.mode)) html += `<div class="row small nodata">⏳ ${esc(notReadyText(S.mode))}</div>`;
     $("legend").innerHTML = html;
   }
 
@@ -180,7 +212,7 @@
   function setView(v) {
     S.view = v; store.set("nfa_view", v);
     S.mode = v === "farmer" ? "plant" : "flood"; syncModeButtons();
-    lgaLayer && lgaLayer.setStyle(lgaStyle); stateLayer && stateLayer.setStyle(stateStyle); renderLegend();
+    lgaLayer && lgaLayer.setStyle(lgaStyle); stateLayer && stateLayer.setStyle(stateStyle); recolorPoints(); renderLegend();
     renderToday();
   }
 
@@ -193,9 +225,11 @@
     const lt = S.data.latest;
     let html = "";
     const st = S.data.status && S.data.status.last;
-    if (!lt || !lt.points || !lt.points.some((p) => p.level != null)) {
-      const prog = st && st.backfill ? Math.round(100 * (st.backfill.complete_years_flood || 0) / (new Date().getFullYear() - 2011)) : 0;
-      html += `<div class="warmup"><b>Warming up.</b> The automatic pipeline is building the national river network and downloading history (${prog}% done). The map fills in by itself over the first runs — no action needed.</div>`;
+    if (!dataReady("flood") || !dataReady("season")) {
+      const b = (st && st.backfill) || {};
+      html += `<div class="warmup"><b>Warming up.</b> NaijaFloodAlert downloads 14 years of river and weather records by itself, a little every few hours.
+        River history: ${(b.complete_years_flood || 0).toFixed(1)} years · weather history: ${(b.complete_years_wx || 0).toFixed(1)} years.
+        Flood levels switch on at 3 years, the season and heat maps at 2 years. Grey points have no verdict yet.</div>`;
     }
     const lgaVals = Object.values((lt && lt.lgas) || {});
     const atRisk = lgaVals.filter((v) => v[0] >= 1).length;
@@ -325,7 +359,7 @@
     spotMarker = L.circleMarker([lat, lon], { radius: 7, color: "#0a2540", weight: 3, fillColor: "#fff", fillOpacity: 1 }).addTo(map);
     switchTab("today");
     renderPlace(S.sel);
-    if (window.innerWidth <= 860) $("panel").classList.add("full");
+    if (window.innerWidth <= 860) sheetState("full");
   }
 
   function placeAssessment(sel) {
@@ -454,6 +488,48 @@
     }
   }
 
+  // ---------- mobile bottom sheet (drag or tap the handle; transform-only animation) ----------
+  function sheetState(st) {
+    const p = $("panel");
+    p.classList.remove("full", "min");
+    if (st !== "half") p.classList.add(st);
+    p.style.transform = "";
+  }
+  function initSheet() {
+    const p = $("panel"), grip = $("grip"), tabs = p.querySelector(".tabs");
+    grip.addEventListener("click", (e) => { if (p._dragged) return; sheetState(p.classList.contains("full") ? "half" : "full"); });
+    let y0 = 0, base = 0, t0 = 0, active = false;
+    const offset = () => { const m = new DOMMatrixReadOnly(getComputedStyle(p).transform); return m.m42; };
+    const start = (e) => {
+      if (window.innerWidth > 860) return;
+      active = true; p._dragged = false; y0 = e.clientY; t0 = performance.now(); base = offset();
+      p.classList.add("dragging");
+    };
+    const move = (e) => {
+      if (!active) return;
+      const dy = e.clientY - y0;
+      if (Math.abs(dy) > 4) p._dragged = true;
+      const max = p.offsetHeight - 118;
+      p.style.transform = `translateY(${Math.max(0, Math.min(max, base + dy))}px)`;
+    };
+    const end = (e) => {
+      if (!active) return;
+      active = false; p.classList.remove("dragging");
+      if (!p._dragged) { p.style.transform = ""; return; }
+      const y = offset(), h = p.offsetHeight, v = (e.clientY - y0) / Math.max(1, performance.now() - t0);
+      const snaps = { full: 0, half: h - window.innerHeight * 0.42, min: h - 118 };
+      let best = Object.entries(snaps).sort((a, b) => Math.abs(a[1] - y) - Math.abs(b[1] - y))[0][0];
+      if (v > 0.6) best = y < snaps.half ? "half" : "min";
+      if (v < -0.6) best = y > snaps.half ? "half" : "full";
+      sheetState(best);
+      setTimeout(() => { p._dragged = false; }, 50);
+    };
+    [grip, tabs].forEach((el) => el.addEventListener("pointerdown", start));
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  }
+
   // ---------- climate time-lapse (NASA GIBS imagery for one place) ----------
   function lapseDates(kind) {
     const out = [];
@@ -482,7 +558,7 @@
     S.lapse = { kind, dates: lapseDates(kind), i: 0, layer: null, timer: null };
     map.flyTo([lat, lon], Math.min(Math.max(map.getZoom(), 8), 9), { duration: 0.8 });
     $("replaybar").hidden = false; document.body.classList.add("replaying", "lapsing");
-    $("panel").classList.remove("full");
+    if (window.innerWidth <= 860) sheetState("half");
     $("rbSlider").max = S.lapse.dates.length - 1; $("rbSat").parentElement.style.display = "none";
     $("legend").innerHTML = kind === "ndvi"
       ? `<b>Vegetation (NDVI)</b><div class="row"><span class="sw" style="background:linear-gradient(90deg,#a0522d,#e8d48a,#9acd32,#006400);width:120px"></span></div><div class="row small muted">brown = dry · green = growing</div><button class="btn ghost" id="lapseStop" style="margin-top:6px">Close time-lapse</button>`
@@ -708,11 +784,8 @@
     $("lang").value = S.lang;
     $("lang").addEventListener("change", (e) => { S.lang = e.target.value; store.set("nfa_lang", S.lang); applyLang(); });
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { switchTab(b.dataset.tab); if (b.dataset.tab === "today") renderToday(); }));
-    document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => {
-      S.mode = b.dataset.mode; syncModeButtons();
-      lgaLayer && lgaLayer.setStyle(lgaStyle); stateLayer && stateLayer.setStyle(stateStyle); renderLegend();
-    }));
-    $("grip").addEventListener("click", () => $("panel").classList.toggle("full"));
+    document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+    initSheet();
     $("play").addEventListener("click", togglePlay);
     $("rbClose").addEventListener("click", () => { if (S.lapse) stopLapse(); else if (S.replay) exitReplay(); });
     $("rbSlider").addEventListener("input", (e) => { if (S.lapse) { clearTimeout(S.lapse.timer); S.lapse.timer = null; $("play").textContent = "▶"; return lapseFrame(+e.target.value); } stopPlay(); setDay(+e.target.value); });

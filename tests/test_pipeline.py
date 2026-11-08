@@ -85,7 +85,7 @@ def run_test():
     config.RUN_BUDGET = 10 ** 9
     from pipeline import daily, history, model, network, run as runmod
     for mod in (network, history, model, daily):
-        for name in ("SNAP_FILE", "POINTS_FILE", "PROGRESS", "FLOOD_DIR", "WX_DIR", "MODEL_DIR"):
+        for name in ("SNAP_FILE", "POINTS_FILE", "PROGRESS", "FLOOD_DIR", "WX_DIR", "MODEL_DIR", "TODAY_FILE"):
             if hasattr(mod, name):
                 old = getattr(mod, name)
                 setattr(mod, name, Path(str(old).replace(str(ROOT), str(tmp))))
@@ -120,9 +120,31 @@ def run_test():
     print("lagdo:", lg["source"].get("name"), [(t["name"], t["lag_days"], t["corr"]) for t in lg["targets"]])
     st = next(iter(latest["states"].values()))
     assert "dry_run" in st and st.get("rain_days") is not None, st
-    print("PIPELINE TEST PASSED")
+    return tmp
+
+
+def run_budget_test():
+    """With a tight quota (network done, little history) the map must still get today's forecast."""
+    tmp = run_test()
+    from pipeline import history, run as runmod
+    import pipeline.daily as daily
+    # wipe today's outputs and most history, keep the snapped network
+    (config.DATA / "latest.json").unlink()
+    shutil.rmtree(history.FLOOD_DIR); shutil.rmtree(history.WX_DIR); history.PROGRESS.unlink()
+    daily.TODAY_FILE.unlink()
+    config.RUN_BUDGET = 1500
+    from pipeline import om
+    real = om.Client
+    runmod.Client = lambda: real(budget=1500, session=FakeSession(), sleep=lambda s: None)
+    runmod.main()
+    latest = json.loads((config.DATA / "latest.json").read_text())
+    status = json.loads((config.DATA / "status.json").read_text())["last"]
+    assert any(p.get("q") for p in latest["points"]), "forecast present despite small budget"
+    assert status["backfill"]["wx_chunks"] > 0, status
+    print("budget run:", status["daily"], status["backfill"], "calls", status["api_calls_used"])
     return tmp
 
 
 if __name__ == "__main__":
-    run_test()
+    run_budget_test()
+    print("PIPELINE TEST PASSED")

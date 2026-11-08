@@ -33,6 +33,9 @@ def _save(p):
     PROGRESS.write_text(json.dumps(p, separators=(",", ":")))
 
 
+WX_FIRST_YEARS = 4
+
+
 def years():
     last = date.today().year
     return list(range(last, config.HISTORY_START_YEAR - 1, -1))
@@ -49,6 +52,10 @@ def backfill(client: Client, points: list[dict], states: list[dict]) -> dict:
     prog = _progress()
     stats = {"flood_chunks": 0, "wx_chunks": 0}
     try:
+        # Weather first for the newest WX_FIRST_YEARS years: it is cheap (37 states) and it
+        # switches on the season, planting and heat maps within the first day.
+        for y in years()[:WX_FIRST_YEARS]:
+            _wx_year(client, states, y, prog, stats)
         for y in years():
             # Each year is fetched once; the daily job keeps the latest weeks topped up.
             ys = str(y)
@@ -66,27 +73,32 @@ def backfill(client: Client, points: list[dict], states: list[dict]) -> dict:
                         prog["flood"][p["id"]].append(ys)
                 stats["flood_chunks"] += 1
                 _save(prog)
-            todo = [s for s in states if ys not in prog["wx"].get(s["id"], [])]
-            for i in range(0, len(todo), BATCH):
-                batch = todo[i:i + BATCH]
-                a, b = _year_range(y, lag_days=7)
-                if b < a:      # first days of January: nothing archived yet this year
-                    break
-                res = client.archive([s["lat"] for s in batch], [s["lon"] for s in batch], daily="precipitation_sum,temperature_2m_max", start_date=a, end_date=b)
-                for s, item in zip(batch, res):
-                    d = item.get("daily", {})
-                    rows = {t: [p, tx] for t, p, tx in zip(d.get("time", []), d.get("precipitation_sum", []), d.get("temperature_2m_max", []))}
-                    store.merge(WX_DIR / f"{s['id']}.csv", ["rain", "tmax"], rows)
-                    prog["wx"].setdefault(s["id"], [])
-                    if ys not in prog["wx"][s["id"]]:
-                        prog["wx"][s["id"]].append(ys)
-                stats["wx_chunks"] += 1
-                _save(prog)
+            _wx_year(client, states, y, prog, stats)
     except BudgetExhausted:
         pass
     stats["complete_years_flood"] = completeness(prog["flood"], points)
     stats["complete_years_wx"] = completeness(prog["wx"], states)
     return stats
+
+
+def _wx_year(client, states, y, prog, stats):
+    ys = str(y)
+    todo = [s for s in states if ys not in prog["wx"].get(s["id"], [])]
+    for i in range(0, len(todo), BATCH):
+        batch = todo[i:i + BATCH]
+        a, b = _year_range(y, lag_days=7)
+        if b < a:      # first days of January: nothing archived yet this year
+            return
+        res = client.archive([s["lat"] for s in batch], [s["lon"] for s in batch], daily="precipitation_sum,temperature_2m_max", start_date=a, end_date=b)
+        for s, item in zip(batch, res):
+            d = item.get("daily", {})
+            rows = {t: [p, tx] for t, p, tx in zip(d.get("time", []), d.get("precipitation_sum", []), d.get("temperature_2m_max", []))}
+            store.merge(WX_DIR / f"{s['id']}.csv", ["rain", "tmax"], rows)
+            prog["wx"].setdefault(s["id"], [])
+            if ys not in prog["wx"][s["id"]]:
+                prog["wx"][s["id"]].append(ys)
+        stats["wx_chunks"] += 1
+        _save(prog)
 
 
 def completeness(done: dict, items: list[dict]) -> float:
