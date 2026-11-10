@@ -81,6 +81,44 @@ def snap_all(client: Client) -> bool:
     return done
 
 
+DUP_KM = 3.5
+
+
+def _km(a, b):
+    import math
+    return math.hypot((a["lat"] - b["lat"]) * 111.0, (a["lon"] - b["lon"]) * 111.0 * math.cos(math.radians(a["lat"])))
+
+
+def _tidy(pts):
+    """Hide near-duplicate gauges and give same-named points distinct names.
+
+    Point ids never change (history files are keyed by id); a duplicate is only flagged
+    "hide" so the website does not show the same river reach twice."""
+    for i, a in enumerate(pts):
+        for b in pts[i + 1:]:
+            if a.get("hide") or b.get("hide") or _km(a, b) > DUP_KM:
+                continue
+            drop = a if (b["_named"] and not a["_named"]) else b
+            drop["hide"] = True
+    groups = {}
+    for p in pts:
+        if not p.get("hide"):
+            groups.setdefault((p["river"], p["name"]), []).append(p)
+    for (_, name), grp in groups.items():
+        if len(grp) < 2:
+            continue
+        # compass labels along the axis where the points are furthest apart (always true, unlike up/downstream)
+        dlat = max(p["lat"] for p in grp) - min(p["lat"] for p in grp)
+        dlon = max(p["lon"] for p in grp) - min(p["lon"] for p in grp)
+        ns = dlat * 111.0 >= dlon * 111.0
+        grp.sort(key=(lambda p: -p["lat"]) if ns else (lambda p: p["lon"]))
+        ends = ("north", "south") if ns else ("west", "east")
+        for k, p in enumerate(grp):
+            p["name"] = f"{name} ({ends[0] if k == 0 else ends[1] if k == len(grp) - 1 else 'central'})"
+    for p in pts:
+        p.pop("_named", None)
+
+
 def build_points(snaps: dict):
     """Turn snapped candidates into the public monitoring network (deduplicated, named)."""
     lgas = json.loads((config.DATA / "geo" / "lgas.geojson").read_text())["features"]
@@ -102,7 +140,9 @@ def build_points(snaps: dict):
             "id": f"p{len(pts):03d}", "name": c.get("label") or props["name"], "state": c.get("region") or props["state"], "lga": props["id"],
             "river": c["river"], "lat": s["lat"], "lon": s["lon"], "peak2022": s["peak2022"],
             **({"upstream": True} if c.get("label") else {}),
+            "_named": "(" in c["river"] or bool(c.get("label")),   # hand-picked site with a proper name
         })
+    _tidy(pts)
     config.DATA.mkdir(parents=True, exist_ok=True)
     new = json.dumps(pts, separators=(",", ":"))
     if not POINTS_FILE.exists() or POINTS_FILE.read_text() != new:

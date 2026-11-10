@@ -11,6 +11,7 @@ from datetime import date, timedelta
 import numpy as np
 
 DRY_DAY_MM = 1.0
+PLANT_WINDOW_DAYS = 60    # main sowing window after the rains are established
 
 
 def rolling_sum(a, w):
@@ -142,8 +143,15 @@ def assess_state(rows: dict, lat: float, today: date, forecast7: float | None):
         if np.isfinite(v) and v >= DRY_DAY_MM:
             break
         dry_run += 1
+    ahead = c30[min(d + 30, 365)]
+    rains_ending = bool(in_rainy and np.isfinite(ahead) and ahead < 0.6 * normal30)
+    days_since_onset = (date.fromisoformat(full_dates[last]) - o_date).days if o_date else None
     if not in_rainy and o_status in ("waiting", "not_started"):
         plant = "dry_season"
+    elif o_status == "established" and in_rainy and rains_ending:
+        plant = "harvest"
+    elif o_status == "established" and in_rainy and days_since_onset is not None and days_since_onset > PLANT_WINDOW_DAYS:
+        plant = "growing"     # the planting window after onset has passed; season under way
     elif o_status == "established" and in_rainy:
         plant = "plant"
     elif o_status == "starting":

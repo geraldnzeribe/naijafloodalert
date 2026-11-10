@@ -3,7 +3,7 @@
   const I = window.NFA_I18N;
   const LV_COL = ["#2e9e5b", "#f2b705", "#ef6c00", "#d32f2f"];
   const SEASON_COL = { drought: "#8d4a1f", dry: "#d9a441", normal: "#7cb342", wet: "#29a3e0", very_wet: "#1452a8", dry_season: "#bfb39a", unknown: "#b0bec5" };
-  const PLANT_COL = { dry_season: "#bfb39a", waiting: "#d9a441", wait_confirm: "#f2b705", plant: "#2e9e5b", harvest: "#8d6e63" };
+  const PLANT_COL = { dry_season: "#bfb39a", waiting: "#d9a441", wait_confirm: "#f2b705", plant: "#2e9e5b", growing: "#81c784", harvest: "#8d6e63" };
   const FLOOD_API = "https://flood-api.open-meteo.com/v1/flood";
   const NG_BOUNDS = L.latLngBounds([3.9, 2.4], [14.1, 15.0]);
   const S = { lang: "en", mode: "flood", view: "public", data: {}, sel: null, replay: null, lapse: null, charts: {} };
@@ -129,6 +129,7 @@
       p._m.setStyle({ fillColor: lv == null ? "#90a4ae" : LV_COL[lv], radius: lv >= 2 ? 8 : 6 });
     });
   }
+  const shown = (id) => !(S.data.pointById[id] || {}).hide;
   const latestPoint = (id) => (S.data.latestById || {})[id];
 
   // ---------- legend ----------
@@ -180,11 +181,12 @@
       tryJSON("data/latest.json"), tryJSON("data/points.json"), tryJSON("data/geo/lgas.geojson"),
       tryJSON("data/geo/states.geojson"), tryJSON("data/status.json"), tryJSON("data/history/index.json"),
     ]);
-    S.data = { latest, points: points || [], lgas: lgas ? lgas.features : [], states: states ? states.features : [], status, hindex: hindex || [] };
+    const allPts = points || [];
+    S.data = { latest, allPoints: allPts, points: allPts.filter((p) => !p.hide), lgas: lgas ? lgas.features : [], states: states ? states.features : [], status, hindex: hindex || [] };
     S.data.latestById = {};
     ((latest && latest.points) || []).forEach((p) => { S.data.latestById[p.id] = p; });
     S.data.pointById = {};
-    S.data.points.forEach((p) => { S.data.pointById[p.id] = p; });
+    S.data.allPoints.forEach((p) => { S.data.pointById[p.id] = p; });
     S.data.stateByName = {};
     S.data.states.forEach((f) => { S.data.stateByName[f.properties.name] = f.properties; });
     const links = await tryJSON("data/lga_links.json");
@@ -271,7 +273,7 @@
     let html = viewSwitch() + `<h2>Farm outlook</h2><p class="muted small">Planting signal, rain and heat for every state, compared with the same time of year since 2012. Tap a state to zoom in, or tap your community on the map.</p>`;
     if (!states.length) html += `<div class="warmup">Season data appears after the first full daily update.</div>`;
     const counts = {}; states.forEach(([, s]) => { counts[s.plant] = (counts[s.plant] || 0) + 1; });
-    html += `<div class="cards">${["plant", "wait_confirm", "waiting", "dry_season", "harvest"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big" style="color:${PLANT_COL[k]}">${counts[k]}</b><span>${esc(t.plant[k])}</span></div>`).join("")}</div>`;
+    html += `<div class="cards">${["plant", "growing", "wait_confirm", "waiting", "dry_season", "harvest"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big" style="color:${PLANT_COL[k]}">${counts[k]}</b><span>${esc(t.plant[k])}</span></div>`).join("")}</div>`;
     html += `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
         <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
       <p class="small muted">Small bars: rain forecast for the next 7 days.</p>`;
@@ -286,7 +288,7 @@
       if (v[0] < 1 && v[1] < 0.3) return;
       const f = lgaById(lid); if (!f) return;
       const ids = ((S.data.links || {})[lid] || {}).points || [];
-      const pts = ids.map((id) => latestPoint(id)).filter(Boolean).sort((a, b) => (b.level || 0) - (a.level || 0));
+      const pts = ids.filter(shown).map((id) => latestPoint(id)).filter(Boolean).sort((a, b) => (b.level || 0) - (a.level || 0));
       const p = pts[0]; const meta = p ? S.data.pointById[p.id] : null;
       out.push({ lid, name: f.name, state: f.state, level: v[0], ml7: v[1], river: meta ? meta.river : "rainfall", first: p && p.first, peak: p && p.peak_date });
     });
@@ -367,7 +369,7 @@
     const lv = ((lt.lgas || {})[sel.lga.id] || [0, 0]);
     const ids = ((S.data.links || {})[sel.lga.id] || {}).points || [];
     let main = sel.pointId ? latestPoint(sel.pointId) : null;
-    const cands = ids.map((id) => latestPoint(id)).filter(Boolean);
+    const cands = ids.filter(shown).map((id) => latestPoint(id)).filter(Boolean);
     if (!main && cands.length) main = cands.sort((a, b) => (b.level || 0) - (a.level || 0) || (b.peak || 0) - (a.peak || 0))[0];
     const sProps = S.data.stateByName[sel.lga.state];
     const season = sProps && lt.states ? lt.states[sProps.id] : null;
