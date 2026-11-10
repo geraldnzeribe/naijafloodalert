@@ -4,7 +4,7 @@
   "description": "Flood, rain and season watch for every community in Nigeria",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f3f6f9",
-  "theme_color": "#0b3d5c",
+  "background_color": "#dfe8e8",
+  "theme_color": "#0a2a3a",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
