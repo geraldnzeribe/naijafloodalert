@@ -115,15 +115,30 @@ def build_dataset(points, flood, th_by_id, rain_by_point, start, end):
     return blocks
 
 
-def train(points, flood, th_by_id, rain_by_point, start, end):
+def split_year(data_years):
+    """First test year. History is back-filled newest year first, so early on the fixed
+    VALID_FROM split would leave nothing to train on: hold out the newest ~30% of years instead."""
+    ys = sorted(set(int(y) for y in data_years))
+    if not ys:
+        return VALID_FROM
+    if ys[0] <= VALID_FROM - 4:
+        return VALID_FROM
+    n_test = max(2, -(-len(ys) * 3 // 10))
+    return ys[-n_test] if len(ys) > n_test else ys[-1]
+
+
+def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
     from sklearn.ensemble import HistGradientBoostingClassifier
     from sklearn.metrics import brier_score_loss, roc_auc_score
     import joblib
 
     blocks = build_dataset(points, flood, th_by_id, rain_by_point, start, end)
     years = np.array([(start + timedelta(days=i)).year for i in range((end - start).days + 1)])
-    metrics = {"trained": datetime.now(timezone.utc).isoformat(timespec="minutes"), "train_years": f"{start.year}-{VALID_FROM - 1}",
-               "test_years": f"{VALID_FROM}-{end.year}", "points": len(blocks), "leads": {}}
+    have = sorted(set(int(y) for _pid, X, _q in blocks for y in np.unique(years[np.isfinite(X[:, 0])])))
+    split = split_year(have)
+    metrics = {"trained": datetime.now(timezone.utc).isoformat(timespec="minutes"),
+               "train_years": f"{have[0] if have else start.year}-{split - 1}", "test_years": f"{split}-{end.year}",
+               "points": len(blocks), "history_avg": history_avg, "leads": {}}
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     for lead in config.LEADS:
         metrics["leads"][str(lead)] = {}
@@ -136,7 +151,7 @@ def train(points, flood, th_by_id, rain_by_point, start, end):
                 Xs.append(X[ok]); ys.append(y[ok]); yrs.append(years[ok])
                 pers.append(q[ok] >= th_by_id[pid][tkey])
             X = np.vstack(Xs); y = np.concatenate(ys).astype(int); yr = np.concatenate(yrs); per = np.concatenate(pers).astype(int)
-            tr, te = yr < VALID_FROM, yr >= VALID_FROM
+            tr, te = yr < split, yr >= split
             if y[tr].sum() < 50 or y[te].sum() < 10:
                 continue
             clf = HistGradientBoostingClassifier(max_iter=250, learning_rate=0.06, max_leaf_nodes=31, l2_regularization=1.0, random_state=0)
@@ -193,6 +208,12 @@ def needs_training(min_years_avg: float) -> bool:
     if min_years_avg < config.MIN_YEARS_TO_TRAIN:
         return False
     if not m:
+        return True
+    # While history is still downloading, retrain whenever two more years have arrived
+    # (or one, if the last attempt produced no usable model).
+    grew = min_years_avg - (m.get("history_avg") or 0)
+    empty = not any(m.get("leads", {}).values())
+    if grew >= (1 if empty else 2):
         return True
     trained = datetime.fromisoformat(m["trained"])
     return datetime.now(timezone.utc) - trained > timedelta(days=30)
