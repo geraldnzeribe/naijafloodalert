@@ -1,9 +1,9 @@
 {
- "trained": "2026-11-12T09:33+00:00",
+ "trained": "2026-11-12T09:45+00:00",
  "train_years": "2018-2023",
  "test_years": "2024-2026",
  "points": 154,
- "history_avg": null,
+ "history_avg": 8.45,
  "leads": {
   "3": {
    "watch": {

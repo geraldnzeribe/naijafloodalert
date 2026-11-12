@@ -1,7 +1,7 @@
 {
  "runs": [
   {
-   "t": "2026-11-12T09:35+00:00",
+   "t": "2026-11-12T09:46+00:00",
    "calls": 2790,
    "points": 154
   },
@@ -97,7 +97,7 @@
   }
  ],
  "last": {
-  "started": "2026-11-12T09:24+00:00",
+  "started": "2026-11-12T09:35+00:00",
   "network_complete": true,
   "points": 154,
   "daily": "reused",
@@ -108,11 +108,11 @@
    "complete_years_wx": 8.0
   },
   "trained": {
-   "trained": "2026-11-12T09:33+00:00",
+   "trained": "2026-11-12T09:45+00:00",
    "train_years": "2018-2023",
    "test_years": "2024-2026",
    "points": 154,
-   "history_avg": null
+   "history_avg": 8.45
   },
   "levels": {
    "0": 154,
@@ -132,7 +132,7 @@
    2026
   ],
   "api_calls_used": 2790,
-  "finished": "2026-11-12T09:35+00:00"
+  "finished": "2026-11-12T09:46+00:00"
  },
  "badge": {
   "schemaVersion": 1,
