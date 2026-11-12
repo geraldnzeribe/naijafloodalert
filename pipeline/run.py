@@ -67,6 +67,9 @@ def _main():
             m = model.train(valid, flood, th, rain, start, end, history_avg=round(bf["complete_years_flood"], 2))
             log["trained"] = {k: v for k, v in m.items() if k != "leads"}
         # 3) Re-score today's data with the new history (no extra API calls).
+        hc = model.MODEL_DIR / "hindcast.json"
+        if hc.exists():
+            (config.DATA / "hindcast.json").write_text(hc.read_text())
         if bf["flood_chunks"] or bf["wx_chunks"] or "trained" in log:
             latest = daily.rescore(pts)
         log["levels"] = {str(k): sum(1 for p in latest["points"] if p.get("level") == k) for k in range(4)}
