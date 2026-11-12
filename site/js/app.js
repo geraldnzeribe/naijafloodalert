@@ -283,6 +283,7 @@
     S.data.stateByName = {};
     S.data.states.forEach((f) => { S.data.stateByName[f.properties.name] = f.properties; });
     const links = await tryJSON("data/lga_links.json");
+    S.data.hindcast = await tryJSON("data/hindcast.json");
     S.data.links = links || {};
     S.data.lgaPts = {};
     Object.entries(S.data.links).forEach(([lid, v]) => { if (v.points && v.points.length) S.data.lgaPts[lid] = v.points; });
@@ -335,7 +336,7 @@
     const states = Object.values((lt && lt.states) || {});
     const drought = states.filter((s) => s.status === "drought" || s.status === "dry").length;
     const plant = states.filter((s) => s.plant === "plant").length;
-    html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}.</p>
+    html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}. <a href="lite/${S.lang}/index.html">Low-data version</a> · <a href="ussd.html">Basic-phone (USSD) demo</a></p>
       <div class="cards">
         <div class="card"><b class="big">${atRisk}</b><span>communities (LGAs) at Watch or above, next 30 days</span></div>
         <div class="card"><b class="big">${(S.data.points || []).length}</b><span>river points monitored daily</span></div>
@@ -959,6 +960,21 @@
     } else {
       html += `<div class="warmup">The model trains automatically once at least six years of history are downloaded for the river network. Until then, alerts use the physics forecast and local danger levels only.</div>`;
     }
+    const hc = S.data.hindcast;
+    if (hc && hc.events) {
+      const yrs = Object.entries(hc.by_year || {}).sort();
+      html += `<h3>Proof: floods it was never trained on</h3>
+        <p class="small">We replayed every Warning-level flood onset on ${(S.data.points || []).length} rivers in ${esc(hc.test_years)} using only models trained on earlier years.
+        An event is a river rising above its own Warning level in the rainy season after two calm weeks. "Warned" means a 3, 7 or 14-day forecast flagged it in advance; simply watching the river ("tomorrow looks like today") warns 0 days ahead.</p>
+        <div class="cards"><div class="card"><b class="big">${hc.events}</b><span>flood onsets tested</span></div>
+        <div class="card"><b class="big">${Math.round(hc.warned_pct)}%</b><span>warned at least 1 day ahead</span></div>
+        <div class="card"><b class="big">${Math.round(hc.warned3_pct)}%</b><span>warned 3+ days ahead</span></div>
+        <div class="card"><b class="big">${hc.median_lead} days</b><span>median warning time</span></div></div>
+        <table class="metrics"><tr><th>Year</th><th>Flood onsets</th><th>Warned</th><th>3+ days ahead</th></tr>${yrs.map(([y, v]) => `<tr><td>${y}</td><td>${v.events}</td><td>${Math.round(100 * v.warned / v.events)}%</td><td>${Math.round(100 * v.warned3 / v.events)}%</td></tr>`).join("")}</table>
+        <h4>Biggest floods in the test years</h4>
+        <table class="metrics"><tr><th>River, place</th><th>Rose above Warning</th><th>Warned</th></tr>${(hc.top || []).slice(0, 12).map((e) => `<tr><td>${esc(e.river)}, ${esc(e.name)} <span class="muted">(${esc(e.state)})</span></td><td>${fmtDate(e.date, { day: "numeric", month: "short", year: "numeric" })}</td><td><b>${e.lead ? e.lead + " d" : "–"}</b></td></tr>`).join("")}</table>
+        <p class="small muted">Honest limits: sudden floods on small fast rivers (for example the Ogun around Abeokuta and Lagos) get little or no warning, because they are driven by a few days of intense rain. Big river floods (Niger, Benue, Komadugu-Yobe) are flagged days to two weeks ahead. This is a test on modelled river flows (GloFAS); checking against measured gauge readings is the next step.</p>`;
+    }
     if (st && st.last) {
       const l = st.last;
       html += `<h3>Pipeline status</h3><dl class="kv"><dt>Last run</dt><dd>${esc((l.finished || "").replace("T", " "))} UTC</dd><dt>River points</dt><dd>${l.points}</dd>
@@ -978,6 +994,9 @@
         <li>Rain &amp; temperature: ERA5 reanalysis and weather forecasts (via Open-Meteo), CC BY 4.0</li>
         <li>Satellite imagery: NASA GIBS / MODIS; Esri World Imagery</li>
         <li>Maps: © OpenStreetMap contributors, OpenTopoMap; boundaries: geoBoundaries (CC BY 4.0); river lines: Natural Earth (public domain), simplified — they show the main channels only</li></ul>
+      <h3>No smartphone or data?</h3><ul class="small">
+        <li><a href="lite/en/index.html">Text-only pages</a> for every LGA, about 2 KB each, readable on 2G and Opera Mini, in all five languages, with SMS and WhatsApp sharing.</li>
+        <li><a href="ussd.html">USSD demo</a>: the same alerts as a menu for basic phones (simulation, ready for a real short code).</li></ul>
       <h3>Languages</h3><p class="small">English, Nigerian Pidgin, Hausa, Yorùbá and Igbo. Hausa, Yorùbá and Igbo texts are first drafts awaiting review by native speakers — corrections are welcome on GitHub.</p>
       <h3>Important</h3><p class="small">This is a research and public-information tool. It does not replace official warnings from NIHSA, NiMet, NEMA or State Emergency Management Agencies. In an emergency call <b>112</b>.</p>
       <p class="small">Built by Nzeribe Gerald Ifeanyichukwu · <a href="https://github.com/geraldnzeribe/naijafloodalert" target="_blank" rel="noopener">Source code (MIT)</a></p>`;
