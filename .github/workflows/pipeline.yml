@@ -41,6 +41,10 @@ jobs:
         continue-on-error: true
         run: python -m pipeline.run
 
+      - name: Build low-data pages (text-only LGA pages + USSD data)
+        continue-on-error: true
+        run: node tools/build_lite.js
+
       - name: Save new data to the repository
         run: |
           git config user.name "naijafloodalert-bot"
