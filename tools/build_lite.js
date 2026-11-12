@@ -17,7 +17,9 @@ const read = (p) => JSON.parse(fs.readFileSync(path.join(DATA, p), "utf8"));
 
 const ctx = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(SITE, "js", "i18n.js"), "utf8"), ctx);
+vm.runInNewContext(fs.readFileSync(path.join(SITE, "js", "farmflood.js"), "utf8"), ctx);
 const I = ctx.window.NFA_I18N;
+const FF = ctx.window.NFA_FARMFLOOD;
 
 const latest = read("latest.json");
 const points = read("points.json");
@@ -33,6 +35,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const fmt = (iso) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : null);
 const SITE_URL = "https://geraldnzeribe.github.io/naijafloodalert/";
 
+const LEADS = (latest.model && latest.model.leads) || {};
+const THR = { 7: LEADS["7"] && LEADS["7"].warning && LEADS["7"].warning.threshold, 14: LEADS["14"] && LEADS["14"].warning && LEADS["14"].warning.threshold };
+
 // ---- one record per LGA (same logic as the main site's place view) ----
 const recs = lgas.map((l) => {
   const lv = (latest.lgas || {})[l.id] || [0, 0];
@@ -42,7 +47,9 @@ const recs = lgas.map((l) => {
   const main = cands[0];
   const st = stByName[l.state];
   const season = st && latest.states ? latest.states[st.id] : null;
-  return { l, lv: lv[0], ml7: lv[1], main, meta: main ? pById[main.id] : null, season, sid: st && st.id };
+  const rivers = ids.map((id) => lById[id] && { river: pById[id].river, level: lById[id].level || 0, first: lById[id].first, ml: lById[id].ml }).filter(Boolean);
+  const farm = rivers.length ? { a: FF.assess(rivers, l.lat, latest.date, THR) } : null;
+  return { l, lv: lv[0], ml7: lv[1], main, meta: main ? pById[main.id] : null, season, sid: st && st.id, farm };
 });
 
 function alertText(lang, r) {
@@ -73,7 +80,8 @@ const lite = {
     dry7: latest.states[s.id].dry_next7 ?? null, dry_run: latest.states[s.id].dry_run ?? 0 } : {}) }))
     .sort((a, b) => a.name.localeCompare(b.name)),
   lgas: recs.map((r) => ({ id: r.l.id, n: r.l.name, s: r.sid, lv: r.lv, ml: Math.round(100 * (r.ml7 || 0)),
-    r: r.meta ? r.meta.river : null, f: r.main && r.main.first || null, pk: r.main && r.main.level > 0 ? r.main.peak_date : null }))
+    r: r.meta ? r.meta.river : null, f: r.main && r.main.first || null, pk: r.main && r.main.level > 0 ? r.main.peak_date : null,
+    ...(r.farm ? { fa: r.farm.a || 0 } : {}) }))
     .sort((a, b) => a.n.localeCompare(b.n)),
 };
 fs.writeFileSync(path.join(DATA, "lite.json"), JSON.stringify(lite));
@@ -130,6 +138,7 @@ for (const lang of I.langs) {
     let b = `<p class="m"><a href="../${slug(r.l.state)}.html">← ${esc(r.l.state)}</a> · <a href="../index.html">${esc(t.tab_today || "Home")}</a></p>` +
       `<h1>${esc(r.l.name)}</h1><p>${badge(lang, r.lv)}</p><div class="box">${esc(msg)}</div>`;
     if (r.ml7) b += `<p class="m">ML: ${Math.round(100 * r.ml7)}% / 7 d</p>`;
+    if (r.farm) b += `<h2>🌾 ${esc(FF.title(lang))}</h2><div class="box">${esc(FF.text(r.farm.a, lang))}</div>`;
     if (farm) b += `<h2>${esc(t.mode_plant)}</h2><div class="box">${esc(farm)}</div>`;
     b += `<p><a href="sms:?body=${encodeURIComponent(share)}">SMS</a> · <a href="https://wa.me/?text=${encodeURIComponent(share)}">WhatsApp</a></p>`;
     b += `<p class="m">${I.langs.filter((k) => k !== lang).map((k) => `<a href="../../${k}/l/${r.l.id}.html">${esc(I.L[k]._name)}</a>`).join(" | ")}</p>`;
