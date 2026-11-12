@@ -1,6 +1,11 @@
 {
  "runs": [
   {
+   "t": "2026-11-12T01:42+00:00",
+   "calls": 2862,
+   "points": 154
+  },
+  {
    "t": "2026-11-11T18:53+00:00",
    "calls": 2792,
    "points": 154
@@ -87,14 +92,14 @@
   }
  ],
  "last": {
-  "started": "2026-11-11T18:44+00:00",
+  "started": "2026-11-12T01:34+00:00",
   "network_complete": true,
   "points": 154,
-  "daily": "reused",
+  "daily": "fetched",
   "backfill": {
    "flood_chunks": 8,
-   "wx_chunks": 3,
-   "complete_years_flood": 7.51948051948052,
+   "wx_chunks": 0,
+   "complete_years_flood": 8.0,
    "complete_years_wx": 7.0
   },
   "levels": {
@@ -113,13 +118,13 @@
    2025,
    2026
   ],
-  "api_calls_used": 2792,
-  "finished": "2026-11-11T18:53+00:00"
+  "api_calls_used": 2862,
+  "finished": "2026-11-12T01:42+00:00"
  },
  "badge": {
   "schemaVersion": 1,
   "label": "data updated",
-  "message": "2026-11-11",
+  "message": "2026-11-12",
   "color": "1565c0"
  }
 }
