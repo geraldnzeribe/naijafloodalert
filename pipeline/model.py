@@ -26,7 +26,9 @@ from . import config
 MODEL_DIR = config.CACHE / "model"
 VALID_FROM = 2021
 NEIGHBOUR_KM = 150
-FEATURES = ["r0", "r1", "r3", "r7", "r14", "d1", "d7", "max30", "doy_s", "doy_c", "nb_r0", "nb_d7", "rain30", "rain7"]
+FEATURES = ["r0", "r1", "r3", "r7", "r14", "d1", "d7", "max30", "doy_s", "doy_c", "nb_r0", "nb_d7", "rain30", "rain7",
+            "w0", "wmax7", "warn_over_watch", "severe_over_warn"]
+THRESHOLD_GRID = np.arange(0.05, 0.95, 0.025)
 TARGETS = {"watch": "p90", "warning": "p98"}
 
 
@@ -70,16 +72,19 @@ def _shift(a, k):
 
 
 def point_features(q, th, start, nb_r0, nb_d7, rain30, rain7):
-    p50, p90 = max(th["p50"], 1e-3), max(th["p90"], 1e-3)
+    p50, p90, p98 = max(th["p50"], 1e-3), max(th["p90"], 1e-3), max(th["p98"], 1e-3)
     r = q / p90
+    w = q / p98          # flow relative to this river's own Warning level
     n = len(q)
     doy = np.array([(start + timedelta(days=i)).timetuple().tm_yday for i in range(n)])
     max30 = np.array([np.nanmax(r[max(0, i - 29):i + 1]) if np.isfinite(r[max(0, i - 29):i + 1]).any() else np.nan for i in range(n)])
+    wmax7 = np.array([np.nanmax(w[max(0, i - 6):i + 1]) if np.isfinite(w[max(0, i - 6):i + 1]).any() else np.nan for i in range(n)])
     X = np.column_stack([
         r, _shift(r, 1), _shift(r, 3), _shift(r, 7), _shift(r, 14),
         (q - _shift(q, 1)) / p50, (q - _shift(q, 7)) / p50, max30,
         np.sin(2 * np.pi * doy / 365.25), np.cos(2 * np.pi * doy / 365.25),
         nb_r0, nb_d7, rain30, rain7,
+        w, wmax7, np.full(n, p98 / p90), np.full(n, max(th["p997"], 1e-3) / p98),
     ])
     return X
 
@@ -128,7 +133,6 @@ def split_year(data_years):
 
 
 def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
-    from sklearn.ensemble import HistGradientBoostingClassifier
     from sklearn.metrics import brier_score_loss, roc_auc_score
     import joblib
 
@@ -136,9 +140,10 @@ def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
     years = np.array([(start + timedelta(days=i)).year for i in range((end - start).days + 1)])
     have = sorted(set(int(y) for _pid, X, _q in blocks for y in np.unique(years[np.isfinite(X[:, 0])])))
     split = split_year(have)
+    calib = split - 1     # last training year: used only to choose the alert threshold
     metrics = {"trained": datetime.now(timezone.utc).isoformat(timespec="minutes"),
                "train_years": f"{have[0] if have else start.year}-{split - 1}", "test_years": f"{split}-{end.year}",
-               "points": len(blocks), "history_avg": history_avg, "leads": {}}
+               "points": len(blocks), "history_avg": history_avg, "features": FEATURES, "calibration_year": calib, "leads": {}}
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     for lead in config.LEADS:
         metrics["leads"][str(lead)] = {}
@@ -154,20 +159,29 @@ def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
             tr, te = yr < split, yr >= split
             if y[tr].sum() < 50 or y[te].sum() < 10:
                 continue
-            clf = HistGradientBoostingClassifier(max_iter=250, learning_rate=0.06, max_leaf_nodes=31, l2_regularization=1.0, random_state=0)
-            clf.fit(X[tr], y[tr])
+            thr = 0.5
+            fit, cal = yr < calib, yr == calib
+            if y[fit].sum() >= 50 and y[cal].sum() >= 10:
+                c0 = _clf().fit(X[fit], y[fit])
+                pc = c0.predict_proba(X[cal])[:, 1]
+                thr = float(max(THRESHOLD_GRID, key=lambda t: _scores(y[cal], pc >= t, pc, roc_auc_score, brier_score_loss)["csi"]))
+            clf = _clf().fit(X[tr], y[tr])
             prob = clf.predict_proba(X[te])[:, 1]
-            pred = prob >= 0.5
+            pred = prob >= thr
             m = _scores(y[te], pred, prob, roc_auc_score, brier_score_loss)
             m["baseline"] = _scores(y[te], per[te].astype(bool), per[te].astype(float), roc_auc_score, brier_score_loss)
-            m["events_test"] = int(y[te].sum()); m["samples_test"] = int(te.sum())
+            m["events_test"] = int(y[te].sum()); m["samples_test"] = int(te.sum()); m["threshold"] = round(thr, 3)
             metrics["leads"][str(lead)][tname] = m
             # Refit on all years for live use.
-            final = HistGradientBoostingClassifier(max_iter=250, learning_rate=0.06, max_leaf_nodes=31, l2_regularization=1.0, random_state=0)
-            final.fit(X, y)
+            final = _clf().fit(X, y)
             joblib.dump(final, MODEL_DIR / f"{tname}_{lead}.joblib")
     (MODEL_DIR / "metrics.json").write_text(json.dumps(metrics, indent=1))
     return metrics
+
+
+def _clf():
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    return HistGradientBoostingClassifier(max_iter=250, learning_rate=0.06, max_leaf_nodes=31, l2_regularization=1.0, random_state=0)
 
 
 def _scores(y, pred, prob, auc, brier):
@@ -188,6 +202,9 @@ def _scores(y, pred, prob, auc, brier):
 def load_models():
     import joblib
     models = {}
+    m = metrics()
+    if not m or m.get("features") != FEATURES:      # trained with an older feature set: retrain first
+        return models
     for lead in config.LEADS:
         for tname in TARGETS:
             f = MODEL_DIR / f"{tname}_{lead}.joblib"
@@ -207,7 +224,7 @@ def needs_training(min_years_avg: float) -> bool:
     m = metrics()
     if min_years_avg < config.MIN_YEARS_TO_TRAIN:
         return False
-    if not m:
+    if not m or m.get("features") != FEATURES:
         return True
     # While history is still downloading, retrain whenever two more years have arrived
     # (or one, if the last attempt produced no usable model).
