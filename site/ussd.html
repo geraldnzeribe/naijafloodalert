@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NaijaFloodAlert USSD demo</title>
+<meta name="description" content="Try NaijaFloodAlert on a basic phone: a USSD menu with flood, farm and season advice for every LGA in five Nigerian languages.">
+<style>
+  :root { --ink:#0b1b2b; --muted:#5b6b7b; --bg:#eef2f5; --card:#fff; --accent:#0d7a8a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--ink); background: var(--bg); }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 24px; grid-template-columns: 340px 1fr; align-items: start; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  p { margin: 6px 0; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .phone { background: #1d232b; border-radius: 34px; padding: 22px 16px 18px; box-shadow: 0 18px 40px rgba(0,0,0,.25); max-width: 340px; margin: 0 auto; width: 100%; }
+  .screen { background: #c9d8b6; color: #1b2410; border-radius: 6px; min-height: 230px; padding: 12px; font: 15px/1.35 "Courier New", monospace; white-space: pre-wrap; word-break: break-word; border: 3px inset #9db08a; }
+  .screen.busy { opacity: .5; }
+  .entry { display: flex; gap: 6px; margin-top: 10px; }
+  .entry input { flex: 1; min-width: 0; font: 18px monospace; padding: 8px; border-radius: 6px; border: 0; background: #2c343e; color: #fff; }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .keys button, .entry button { font: 600 18px system-ui; padding: 12px 0; border-radius: 12px; border: 0; background: #39424e; color: #fff; cursor: pointer; min-height: 48px; }
+  .keys button:active { background: #4c5866; }
+  .entry button { padding: 0 14px; background: var(--accent); }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row button { flex: 1; font: 600 15px system-ui; padding: 12px; border-radius: 12px; border: 0; cursor: pointer; min-height: 48px; }
+  .call { background: #2e9e5b; color: #fff; } .end { background: #c62828; color: #fff; }
+  .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+  .card h2 { font-size: 1.1rem; margin: 0 0 6px; }
+  ol, ul { padding-left: 20px; margin: 6px 0; }
+  code { background: #e6edf2; padding: 1px 5px; border-radius: 4px; }
+  a { color: #0645ad; }
+  .log { font: 13px monospace; color: var(--muted); max-height: 140px; overflow: auto; }
+</style>
+</head>
+<body>
+<main>
+  <section>
+    <div class="phone" aria-label="Basic phone simulator">
+      <div class="screen" id="screen" role="status" aria-live="polite">Dial *347*362# and press Call.</div>
+      <div class="entry"><input id="inp" inputmode="numeric" autocomplete="off" aria-label="Your reply" placeholder="*347*362#"><button id="send">Send</button></div>
+      <div class="keys" id="keys"></div>
+      <div class="row"><button class="call" id="call">Call</button><button class="end" id="end">End</button></div>
+    </div>
+  </section>
+  <section>
+    <h1>NaijaFloodAlert on any phone</h1>
+    <p>Most smallholder farmers and riverside families use basic phones with little or no data. This demo shows NaijaFloodAlert as a <b>USSD menu</b>: no app, no internet, works on any handset. Choose a language, your state and your LGA, and get today's flood alert, farm advice and season outlook, all built from the same live data as the main map.</p>
+    <div class="card">
+      <h2>Try it</h2>
+      <ol>
+        <li>Press <b>Call</b> (the demo code is pre-filled).</li>
+        <li>Reply with the menu numbers: language → state → LGA → what you want.</li>
+        <li><b>8</b> shows more, <b>0</b> goes back. <b>End</b> hangs up.</li>
+      </ol>
+      <p class="muted">Demo only: no real USSD code or SMS is used yet. The menu logic (<code>js/ussd.js</code>) follows the Africa's Talking USSD format, so it can be connected to a real short code without changes.</p>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Other low-data ways in</h2>
+      <ul>
+        <li><a href="lite/en/index.html">Text-only pages</a> for every LGA (about 2 KB each, load on 2G), in English, Pidgin, Hausa, Yorùbá and Igbo.</li>
+        <li>Share any alert by SMS or WhatsApp from those pages.</li>
+        <li><a href="./">Full interactive map</a> for smartphones.</li>
+      </ul>
+    </div>
+    <p class="muted" id="upd"></p>
+    <div class="log" id="log" aria-label="Session log"></div>
+  </section>
+</main>
+<script src="js/i18n.js"></script>
+<script src="js/ussd.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let data = null, session = null;
+  const keys = ["1","2","3","4","5","6","7","8","9","*","0","#"];
+  $("keys").innerHTML = keys.map((k) => `<button data-k="${k}">${k}</button>`).join("");
+  $("keys").addEventListener("click", (e) => { const k = e.target.dataset.k; if (k) $("inp").value += k; });
+  $("inp").value = "*347*362#";
+  const show = (s) => { $("screen").textContent = s.replace(/^(CON|END) /, ""); };
+  const log = (s) => { $("log").textContent = s + "\n" + $("log").textContent; };
+  function respond(reply) {
+    const out = NFA_USSD.handle(session.join("*"), data, NFA_I18N);
+    show(out); log(`> ${reply || "dial"}  →  ${out.split("\n")[0]}`);
+    if (out.startsWith("END")) session = null;
+    $("inp").value = "";
+  }
+  function call() {
+    if (!data) { show("Loading data…"); return; }
+    session = []; respond("");
+  }
+  function send() {
+    const v = $("inp").value.trim();
+    if (!session) { if (/^\*\d+(\*\d+)*#$/.test(v)) call(); else show("Dial *347*362# and press Call."); return; }
+    if (!v) return;
+    session.push(v); respond(v);
+  }
+  $("call").addEventListener("click", () => { session ? send() : call(); });
+  $("send").addEventListener("click", send);
+  $("inp").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+  $("end").addEventListener("click", () => { session = null; show("Session ended. Dial *347*362# and press Call."); $("inp").value = "*347*362#"; });
+  fetch("data/lite.json", { cache: "no-cache" }).then((r) => r.json()).then((d) => {
+    data = d; $("upd").textContent = `Data updated ${(d.generated || "").replace("T", " ").slice(0, 16)} UTC · ${d.lgas.length} LGAs · ${d.states.length} states`;
+  }).catch(() => show("Could not load data. Check your connection."));
+})();
+</script>
+</body>
+</html>
