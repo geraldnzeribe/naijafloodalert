@@ -336,7 +336,7 @@
     const states = Object.values((lt && lt.states) || {});
     const drought = states.filter((s) => s.status === "drought" || s.status === "dry").length;
     const plant = states.filter((s) => s.plant === "plant").length;
-    html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}. <a href="lite/${S.lang}/index.html">Low-data version</a> · <a href="ussd.html">Basic-phone (USSD) demo</a></p>
+    html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}. <a href="lite/${S.lang}/index.html">Low-data version</a> · <a href="ussd.html">Basic-phone (USSD) demo</a> · <a href="story-2022.html">2022 floods replayed</a></p>
       <div class="cards">
         <div class="card"><b class="big">${atRisk}</b><span>communities (LGAs) at Watch or above, next 30 days</span></div>
         <div class="card"><b class="big">${(S.data.points || []).length}</b><span>river points monitored daily</span></div>
@@ -372,10 +372,16 @@
     if (!states.length) html += `<div class="warmup">Season data appears after the first full daily update.</div>`;
     const counts = {}; states.forEach(([, s]) => { counts[s.plant] = (counts[s.plant] || 0) + 1; });
     html += `<div class="cards">${["plant", "growing", "wait_confirm", "waiting", "dry_season", "harvest"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big"><i class="dot" style="background:${PLANT_COL[k]}"></i>${counts[k]}</b><span>${esc(t.plant[k])}</span></div>`).join("")}</div>`;
-    html += `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
+    const ff = (S.data.lgas || []).map((f) => ({ f: f.properties, r: farmAdvice(f.properties.id, f.properties.lat) })).filter((x) => x.r.has && x.r.a)
+      .sort((x, y) => y.r.a.level - x.r.a.level || x.r.a.days - y.r.a.days);
+    html += `<h3>🌾 Riverside farms: harvest before the flood</h3>` + (ff.length
+      ? `<ul class="list">${ff.slice(0, 25).map(({ f, r }) => `<li data-lga="${f.id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)} · ${esc(r.a.river)} · ${r.a.source === "ml" ? `likely within ${r.a.lead} days` : r.a.days ? `in about ${r.a.days} days` : "now"}</small></span><span class="chip l${r.a.level}">${esc(t.lvl[r.a.level])}</span></li>`).join("")}</ul>`
+      : `<p class="small muted">No riverside farming community is expected to flood in the next 30 days. <a href="story-2022.html">See how much warning farmers could have had in 2022 →</a></p>`);
+    html += `<h3>By state</h3><ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
         <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
       <p class="small muted">Small bars: rain forecast for the next 7 days.</p>`;
     const el = $("tab-today"); el.innerHTML = html; bindViewSwitch();
+    el.querySelectorAll("li[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const f = S.data.states.find((x) => x.properties.id === li.dataset.state); if (f) map.fitBounds(L.geoJSON(f).getBounds()); }));
   }
 
@@ -449,6 +455,28 @@
 
   const lgaById = (id) => { const f = (S.data.lgas || []).find((x) => x.properties.id === id); return f ? f.properties : null; };
 
+  // ---------- harvest-before-the-flood advisory (shared logic in js/farmflood.js) ----------
+  function mlThresholds() {
+    const leads = (S.data.latest && S.data.latest.model && S.data.latest.model.leads) || {};
+    const g = (l) => leads[l] && leads[l].warning && leads[l].warning.threshold;
+    return { 7: g("7"), 14: g("14") };
+  }
+  function farmAdvice(lid, lat) {
+    const FF = window.NFA_FARMFLOOD; if (!FF) return { has: false };
+    const ids = ((S.data.links || {})[lid] || {}).points || [];
+    const rivers = ids.filter(shown).map((id) => { const p = latestPoint(id); const m = S.data.pointById[id]; return p && m ? { river: m.river, level: p.level || 0, first: p.first, ml: p.ml } : null; }).filter(Boolean);
+    if (!rivers.length) return { has: false };
+    const a = FF.assess(rivers, lat, (S.data.latest && S.data.latest.date) || today(), mlThresholds());
+    return { has: true, a };
+  }
+  function farmAdviceCard(lid, lat) {
+    const FF = window.NFA_FARMFLOOD; const r = farmAdvice(lid, lat);
+    if (!FF || !r.has) return "";
+    const lv = r.a ? r.a.level : 0;
+    return `<div class="alert l${lv} farmflood"><b>🌾 ${esc(FF.title(S.lang))}</b><p>${esc(FF.text(r.a, S.lang))}</p>
+      ${r.a ? `<p class="small muted">${esc(FF.note(S.lang))}</p>` : `<p class="small"><a href="story-2022.html">See how much warning riverside farmers could have had in 2022 →</a></p>`}</div>`;
+  }
+
   // ---------- place selection ----------
   function selectLocation(lat, lon, lgaProps, pointId, fly) {
     const lga = lgaProps || lgaAt(lat, lon);
@@ -489,6 +517,7 @@
       <span class="chip l${a.lv}">${esc(t.lvl[a.lv])}</span></div>
       <div class="alert l${a.lv}"><p id="msg">${esc(msg)}</p>${t.draft ? `<p class="small muted">⚠ ${esc(t.draft)}</p>` : ""}
         <div class="btns"><a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">${esc(t.share_wa)}</a><button class="btn ghost" id="copy">${esc(t.copy)}</button></div></div>`;
+    if (S.view === "farmer") html += farmAdviceCard(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat);
     if (S.view === "farmer" && a.season) {
       const s = a.season;
       html += `<h3>Farm outlook · ${esc(sel.lga.state)}</h3><p>${chipCol(PLANT_COL[s.plant] || SEASON_COL.unknown, t.plant[s.plant] || "")}</p>
@@ -961,6 +990,7 @@
       html += `<div class="warmup">The model trains automatically once at least six years of history are downloaded for the river network. Until then, alerts use the physics forecast and local danger levels only.</div>`;
     }
     const hc = S.data.hindcast;
+    html += `<p class="small"><a href="story-2022.html"><b>Read the 2022 story:</b> how many days of warning riverside farmers could have had →</a></p>`;
     if (hc && hc.events) {
       const yrs = Object.entries(hc.by_year || {}).sort();
       html += `<h3>Proof: floods it was never trained on</h3>
