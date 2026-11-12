@@ -60,7 +60,11 @@
     const weather = [t.season[state.season] || "", state.heat ? (t.mode_heat + "!") : "", state.rain7 != null ? `${state.rain7}mm/7d` : ""].filter(Boolean).join(" · ");
     switch (rest[0]) {
       case "1": return "END " + clip(flood);
-      case "2": return "END " + clip(`${place}: ${farm}`);
+      case "2": {
+        const FF = root.NFA_FARMFLOOD;
+        const ff = FF && lga.fa !== undefined ? FF.short(lga.fa || null, lang) + " " : "";
+        return "END " + clip(`${place}: ${ff}${farm}`);
+      }
       case "3": return "END " + clip(`${place}: ${weather}`);
       case "4": return "END " + clip(`SMS sent: ${t.lvl[lga.lv]} – ${place}. ${farm}`);
       default: return "END Invalid choice. Dial again.";
