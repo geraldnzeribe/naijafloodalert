@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2022 floods: what farmers could have known · NaijaFloodAlert</title>
+<meta name="description" content="Replaying Nigeria's 2022 floods with a model trained only on earlier years: how many days of warning riverside farmers could have had.">
+<style>
+  :root { --ink:#0b1b2b; --muted:#5b6b7b; --bg:#f4f6f8; --card:#fff; --line:#e3e8ee; --accent:#0d7a8a; --watch:#f2b632; --warn:#ee7421; --sev:#d22b43; --ok:#19a897; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#e8eef4; --muted:#9aabbb; --bg:#0d1620; --card:#14202c; --line:#243444; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 17px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background: #0b1b2b; color: #fff; padding: 28px 16px 22px; }
+  header .in, main { max-width: 860px; margin: 0 auto; }
+  header a { color: #9fe3ec; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); line-height: 1.15; margin: 8px 0 10px; }
+  h2 { font-size: 1.35rem; margin: 34px 0 8px; }
+  h3 { font-size: 1.1rem; margin: 0 0 4px; }
+  main { padding: 8px 16px 48px; }
+  .lede { font-size: 1.1rem; color: #cfe0ea; max-width: 700px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 20px 0 4px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .kpi b { display: block; font-size: 2rem; line-height: 1.1; }
+  .kpi span { color: var(--muted); font-size: .9rem; }
+  .place { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 16px 0; }
+  .place .meta { color: var(--muted); font-size: .92rem; margin: 2px 0 8px; }
+  .tag { display: inline-block; font-weight: 700; font-size: .85rem; padding: 3px 10px; border-radius: 999px; color: #fff; }
+  .tag.good { background: var(--ok); } .tag.mid { background: var(--warn); } .tag.bad { background: var(--sev); }
+  .chart { position: relative; height: 230px; margin-top: 8px; }
+  .timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; font-size: .9rem; }
+  .timeline div { background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+  .timeline b { display: block; }
+  .advice { background: var(--card); border-left: 5px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  ul { padding-left: 22px; }
+  .muted { color: var(--muted); font-size: .92rem; }
+  .cta { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font-weight: 700; padding: 12px 18px; border-radius: 12px; margin: 6px 8px 6px 0; }
+  .cta.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  @media (max-width: 560px) { .timeline { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <a href="./">← NaijaFloodAlert</a>
+  <h1>2022: what riverside farmers could have known, and when</h1>
+  <p class="lede">In 2022 Nigeria had its worst floods in a decade. Farmland along the Niger and Benue went under water just before harvest. We replayed that season using a model trained <b>only on 2016–2020</b>, as if it had been running at the time.</p>
+</div></header>
+<main>
+  <div class="kpis" id="kpis"></div>
+  <p class="muted" id="kpinote"></p>
+
+  <h2>Why days of warning matter on a farm</h2>
+  <p>Floodplain farmers grow rice, maize, sorghum, yam and cassava close to the river because the soil is rich. Most of those crops are mature or nearly mature in September and October, exactly when the Niger and Benue peak. With a week or two of warning a family can:</p>
+  <ul>
+    <li><b>harvest early</b> whatever is mature (rice and maize can be cut a little early and dried),</li>
+    <li><b>move stored grain, seed and fertiliser</b> above the flood line,</li>
+    <li><b>move animals and equipment</b> (pumps, sprayers) to high ground,</li>
+    <li><b>avoid new planting</b> on the riverbank until the water falls.</li>
+  </ul>
+  <p>With one or two days, there is little time to do more than leave.</p>
+
+  <h2>Five places, replayed</h2>
+  <p class="muted">Each chart shows the river's daily flow from July to November 2022 against its own Watch, Warning and Severe levels (from its long-term record), and the model's daily chance that the river would rise above Warning within 14 days.</p>
+  <div id="places"></div>
+
+  <h2>What this shows, honestly</h2>
+  <ul>
+    <li><b>The big, slow floods were visible early.</b> The September–October flood on the Niger (Niger State, Kebbi, Kogi, Delta, Bayelsa) was flagged 7 to 14+ days ahead. 14 days is the longest horizon the model tries, so some were flagged at least that early. These are the floods that stay for weeks and destroy harvests.</li>
+    <li><b>Sudden surges are still hard.</b> The August surge on the Benue (Adamawa, Taraba, Benue, Nasarawa) was flagged only 0–2 days ahead. Watching water coming from upstream in Cameroon (our Lagdo Dam tracker) and adding rainfall forecasts is the next step to close that gap.</li>
+    <li><b>This is a replay on modelled river flows</b> (Copernicus GloFAS), not on measured gauge readings or farm-loss records. Checking it against NIHSA gauges and farmer reports is the next step, and it is why we are looking for pilot partners.</li>
+  </ul>
+
+  <div class="advice">
+    <h3>Today, the same warning reaches farmers as plain advice</h3>
+    <p>When a river near a farming community is forecast to rise, NaijaFloodAlert's Farmer view shows a <b>harvest-before-the-flood advisory</b>: how many days remain, which crops are usually ready for harvest in that zone at that time of year, and what to move. It works in English, Pidgin, Hausa, Yorùbá and Igbo, on 2G text pages and in the basic-phone (USSD) demo.</p>
+    <a class="cta" href="./">Open the live map</a><a class="cta ghost" href="ussd.html">Basic-phone demo</a>
+  </div>
+  <p class="muted">NaijaFloodAlert is an open-source research and public-information tool. It does not replace official warnings from NIHSA, NiMet, NEMA or State Emergency Management Agencies. Code and method: <a href="https://github.com/geraldnzeribe/naijafloodalert">github.com/geraldnzeribe/naijafloodalert</a>.</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  fetch("data/story2022.json").then((r) => r.json()).then((S) => {
+    const s = S.summary;
+    $("kpis").innerHTML = [
+      [`${s.long_warned7} of ${s.long_n}`, "long-lasting floods (2+ weeks above Warning) flagged 7+ days ahead"],
+      [`${Math.round(100 * s.warned3 / s.events)}%`, `of all ${s.events} river flood onsets in 2022 flagged 3+ days ahead`],
+      ["0–2 days", "warning for the sudden August Benue surge (still a weak spot)"],
+    ].map(([b, t]) => `<div class="kpi"><b>${b}</b><span>${t}</span></div>`).join("");
+    $("kpinote").textContent = S.model_note + " Lead times count the first day a 3, 7 or 14-day forecast flagged the rise; 14 days is the longest horizon.";
+    $("places").innerHTML = S.places.map((p, i) => {
+      const cls = p.lead >= 7 ? "good" : p.lead >= 3 ? "mid" : "bad";
+      const leadTxt = p.lead >= 14 ? "14+ days of warning" : p.lead ? `${p.lead} days of warning` : "no advance warning";
+      return `<section class="place"><h3>${esc(p.river)} at ${esc(p.name)}, ${esc(p.state)}</h3>
+        <div class="meta">${esc(p.why)}</div><span class="tag ${cls}">${leadTxt}</span>
+        <div class="timeline">
+          <div><b>${p.first_flag ? fmt(p.first_flag) : "–"}</b>first flagged by the model</div>
+          <div><b>${fmt(p.onset)}</b>river rose above its Warning level</div>
+          <div><b>${p.days_above} days</b>above Warning (peak ${fmt(p.peak)})</div>
+        </div>
+        <div class="chart"><canvas id="c${i}" aria-label="River flow and flood chance at ${esc(p.name)} in 2022"></canvas></div></section>`;
+    }).join("");
+    if (!window.Chart) return;
+    const css = getComputedStyle(document.documentElement);
+    const ink = css.getPropertyValue("--muted").trim(), line = css.getPropertyValue("--line").trim();
+    S.places.forEach((p, i) => {
+      const labels = p.q.map((_, k) => addDays(S.start, k));
+      const flat = (v) => labels.map(() => v);
+      new Chart($("c" + i), {
+        data: { labels, datasets: [
+          { type: "line", label: "River flow (m³/s)", data: p.q, borderColor: "#1c7ed6", borderWidth: 2, pointRadius: 0, yAxisID: "y", tension: .2 },
+          { type: "line", label: "Watch", data: flat(p.watch), borderColor: css.getPropertyValue("--watch"), borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, yAxisID: "y" },
+          { type: "line", label: "Warning", data: flat(p.warning), borderColor: css.getPropertyValue("--warn"), borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, yAxisID: "y" },
+          { type: "bar", label: "Chance of Warning within 14 days", data: p.p14.map((v) => Math.round(100 * v)), backgroundColor: "rgba(210,43,67,.28)", yAxisID: "y2", barPercentage: 1, categoryPercentage: 1 },
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false },
+          plugins: { legend: { labels: { color: ink, boxWidth: 12, font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: ink, maxTicksLimit: 6, callback: (v, k) => new Date(labels[k] + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" }) }, grid: { color: line } },
+            y: { ticks: { color: ink }, grid: { color: line }, title: { display: true, text: "m³/s", color: ink } },
+            y2: { position: "right", min: 0, max: 100, ticks: { color: ink, callback: (v) => v + "%" }, grid: { display: false } } } },
+      });
+    });
+  }).catch(() => { $("places").innerHTML = "<p>Could not load the 2022 replay data.</p>"; });
+})();
+</script>
+</body>
+</html>
