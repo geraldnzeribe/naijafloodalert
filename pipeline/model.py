@@ -145,6 +145,7 @@ def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
                "train_years": f"{have[0] if have else start.year}-{split - 1}", "test_years": f"{split}-{end.year}",
                "points": len(blocks), "history_avg": history_avg, "features": FEATURES, "calibration_year": calib, "leads": {}}
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    evals = {}     # (target, lead) -> (model trained only on pre-test years, threshold)
     for lead in config.LEADS:
         metrics["leads"][str(lead)] = {}
         for tname, tkey in TARGETS.items():
@@ -172,11 +173,69 @@ def train(points, flood, th_by_id, rain_by_point, start, end, history_avg=None):
             m["baseline"] = _scores(y[te], per[te].astype(bool), per[te].astype(float), roc_auc_score, brier_score_loss)
             m["events_test"] = int(y[te].sum()); m["samples_test"] = int(te.sum()); m["threshold"] = round(thr, 3)
             metrics["leads"][str(lead)][tname] = m
+            evals[(tname, lead)] = (clf, thr)
             # Refit on all years for live use.
             final = _clf().fit(X, y)
             joblib.dump(final, MODEL_DIR / f"{tname}_{lead}.joblib")
     (MODEL_DIR / "metrics.json").write_text(json.dumps(metrics, indent=1))
+    try:
+        hc = hindcast(blocks, th_by_id, evals, start, years, split, points)
+        (MODEL_DIR / "hindcast.json").write_text(json.dumps(hc, separators=(",", ":")))
+    except Exception as e:      # the proof page must never break training
+        (MODEL_DIR / "hindcast.json").write_text(json.dumps({"error": repr(e)[:200]}))
     return metrics
+
+
+def hindcast(blocks, th_by_id, evals, start, years, split, points, target="warning"):
+    """How many days ahead would the model have warned of each flood it never saw?
+
+    For every river point and every held-out year, an *event* is the first day in the
+    flood season (Jul-Nov) on which the river rose above its own Warning level after at
+    least 14 days below it. Using only models trained on earlier years, the lead time is
+    the number of days between the first day any 3/7/14-day forecast flagged that rise
+    (probability above its tuned threshold, with the event inside its forecast window)
+    and the event itself. The persistence baseline has a lead time of zero by definition.
+    """
+    names = {p["id"]: p for p in points}
+    leads = sorted(l for (t, l) in evals if t == target)
+    events = []
+    for pid, X, q in blocks:
+        t = th_by_id[pid]["p98" if target == "warning" else "p90"]
+        above = q >= t
+        probs = {L: evals[(target, L)][0].predict_proba(X)[:, 1] for L in leads}
+        for i in range(14, len(q)):
+            d = start + timedelta(days=i)
+            if years[i] < split or not (7 <= d.month <= 11) or not above[i]:
+                continue
+            prev = q[i - 14:i]
+            if not np.isfinite(prev).all() or (prev >= t).any():
+                continue
+            lead = 0
+            for L in leads:
+                thr = evals[(target, L)][1]
+                for k in range(L, 0, -1):          # earliest day whose window still covers day i
+                    j = i - k
+                    if j >= 0 and np.isfinite(X[j, 0]) and probs[L][j] >= thr:
+                        lead = max(lead, k)
+                        break
+            meta = names.get(pid, {})
+            events.append({"id": pid, "river": meta.get("river"), "name": meta.get("name"), "state": meta.get("state"),
+                           "date": d.isoformat(), "lead": int(lead), "peak_ratio": round(float(np.nanmax(q[i:i + 30]) / t), 2)})
+    n = len(events)
+    ld = np.array([e["lead"] for e in events]) if n else np.array([])
+    by_year = {}
+    for e in events:
+        y = by_year.setdefault(e["date"][:4], {"events": 0, "warned": 0, "warned3": 0})
+        y["events"] += 1; y["warned"] += e["lead"] >= 1; y["warned3"] += e["lead"] >= 3
+    return {
+        "target": target, "test_years": f"{split}-{int(years[-1])}", "events": n,
+        "warned_pct": round(100 * float((ld >= 1).mean()), 1) if n else None,
+        "warned3_pct": round(100 * float((ld >= 3).mean()), 1) if n else None,
+        "warned7_pct": round(100 * float((ld >= 7).mean()), 1) if n else None,
+        "median_lead": float(np.median(ld)) if n else None,
+        "by_year": by_year,
+        "top": sorted(events, key=lambda e: (-e["peak_ratio"], e["date"]))[:25],
+    }
 
 
 def _clf():
@@ -224,7 +283,7 @@ def needs_training(min_years_avg: float) -> bool:
     m = metrics()
     if min_years_avg < config.MIN_YEARS_TO_TRAIN:
         return False
-    if not m or m.get("features") != FEATURES:
+    if not m or m.get("features") != FEATURES or not (MODEL_DIR / "hindcast.json").exists():
         return True
     # While history is still downloading, retrain whenever two more years have arrived
     # (or one, if the last attempt produced no usable model).
