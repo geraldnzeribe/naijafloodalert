@@ -1,9 +1,9 @@
 {
- "trained": "2026-11-12T09:58+00:00",
- "train_years": "2018-2023",
- "test_years": "2024-2026",
+ "trained": "2026-11-12T11:21+00:00",
+ "train_years": "2016-2020",
+ "test_years": "2021-2026",
  "points": 154,
- "history_avg": 9.0,
+ "history_avg": 10.13,
  "features": [
   "r0",
   "r1",
@@ -24,114 +24,114 @@
   "warn_over_watch",
   "severe_over_warn"
  ],
- "calibration_year": 2023,
+ "calibration_year": 2020,
  "leads": {
   "3": {
    "watch": {
-    "hit_rate": 0.847,
-    "false_alarm_ratio": 0.069,
-    "csi": 0.797,
-    "auc": 0.992,
-    "brier": 0.0184,
+    "hit_rate": 0.819,
+    "false_alarm_ratio": 0.076,
+    "csi": 0.767,
+    "auc": 0.99,
+    "brier": 0.019,
     "baseline": {
-     "hit_rate": 0.819,
-     "false_alarm_ratio": 0.061,
-     "csi": 0.777,
-     "auc": 0.906,
-     "brier": 0.0263
+     "hit_rate": 0.801,
+     "false_alarm_ratio": 0.069,
+     "csi": 0.756,
+     "auc": 0.897,
+     "brier": 0.0254
     },
-    "events_test": 17988,
-    "samples_test": 160622,
-    "threshold": 0.5
+    "events_test": 32234,
+    "samples_test": 329252,
+    "threshold": 0.6
    },
    "warning": {
-    "hit_rate": 0.702,
-    "false_alarm_ratio": 0.191,
-    "csi": 0.602,
-    "auc": 0.989,
-    "brier": 0.0103,
+    "hit_rate": 0.696,
+    "false_alarm_ratio": 0.149,
+    "csi": 0.62,
+    "auc": 0.988,
+    "brier": 0.0098,
     "baseline": {
-     "hit_rate": 0.652,
-     "false_alarm_ratio": 0.141,
-     "csi": 0.589,
-     "auc": 0.824,
-     "brier": 0.0132
+     "hit_rate": 0.689,
+     "false_alarm_ratio": 0.122,
+     "csi": 0.628,
+     "auc": 0.843,
+     "brier": 0.0117
     },
-    "events_test": 4638,
-    "samples_test": 160622,
-    "threshold": 0.4
+    "events_test": 9461,
+    "samples_test": 329252,
+    "threshold": 0.425
    }
   },
   "7": {
    "watch": {
-    "hit_rate": 0.824,
-    "false_alarm_ratio": 0.139,
-    "csi": 0.727,
-    "auc": 0.987,
-    "brier": 0.0284,
+    "hit_rate": 0.821,
+    "false_alarm_ratio": 0.219,
+    "csi": 0.667,
+    "auc": 0.981,
+    "brier": 0.0323,
     "baseline": {
-     "hit_rate": 0.704,
-     "false_alarm_ratio": 0.043,
-     "csi": 0.683,
-     "auc": 0.85,
-     "brier": 0.0436
+     "hit_rate": 0.674,
+     "false_alarm_ratio": 0.052,
+     "csi": 0.65,
+     "auc": 0.834,
+     "brier": 0.0431
     },
-    "events_test": 21304,
-    "samples_test": 160006,
-    "threshold": 0.4
+    "events_test": 39032,
+    "samples_test": 328636,
+    "threshold": 0.375
    },
    "warning": {
-    "hit_rate": 0.667,
-    "false_alarm_ratio": 0.33,
-    "csi": 0.502,
-    "auc": 0.98,
-    "brier": 0.018,
+    "hit_rate": 0.664,
+    "false_alarm_ratio": 0.331,
+    "csi": 0.5,
+    "auc": 0.977,
+    "brier": 0.0173,
     "baseline": {
-     "hit_rate": 0.483,
-     "false_alarm_ratio": 0.114,
-     "csi": 0.455,
-     "auc": 0.74,
-     "brier": 0.0234
+     "hit_rate": 0.519,
+     "false_alarm_ratio": 0.102,
+     "csi": 0.49,
+     "auc": 0.758,
+     "brier": 0.0211
     },
-    "events_test": 6456,
-    "samples_test": 160006,
-    "threshold": 0.3
+    "events_test": 12850,
+    "samples_test": 328636,
+    "threshold": 0.275
    }
   },
   "14": {
    "watch": {
-    "hit_rate": 0.843,
-    "false_alarm_ratio": 0.201,
-    "csi": 0.696,
-    "auc": 0.982,
-    "brier": 0.0393,
+    "hit_rate": 0.783,
+    "false_alarm_ratio": 0.228,
+    "csi": 0.636,
+    "auc": 0.973,
+    "brier": 0.0473,
     "baseline": {
-     "hit_rate": 0.592,
-     "false_alarm_ratio": 0.034,
-     "csi": 0.58,
-     "auc": 0.794,
-     "brier": 0.0689
+     "hit_rate": 0.552,
+     "false_alarm_ratio": 0.042,
+     "csi": 0.539,
+     "auc": 0.774,
+     "brier": 0.0694
     },
-    "events_test": 25562,
-    "samples_test": 158928,
-    "threshold": 0.35
+    "events_test": 48147,
+    "samples_test": 327558,
+    "threshold": 0.475
    },
    "warning": {
-    "hit_rate": 0.703,
-    "false_alarm_ratio": 0.406,
-    "csi": 0.475,
-    "auc": 0.973,
-    "brier": 0.0267,
+    "hit_rate": 0.717,
+    "false_alarm_ratio": 0.487,
+    "csi": 0.427,
+    "auc": 0.966,
+    "brier": 0.0275,
     "baseline": {
-     "hit_rate": 0.357,
-     "false_alarm_ratio": 0.09,
-     "csi": 0.344,
-     "auc": 0.677,
-     "brier": 0.0384
+     "hit_rate": 0.383,
+     "false_alarm_ratio": 0.085,
+     "csi": 0.37,
+     "auc": 0.691,
+     "brier": 0.0353
     },
-    "events_test": 8984,
-    "samples_test": 158928,
-    "threshold": 0.275
+    "events_test": 17727,
+    "samples_test": 327558,
+    "threshold": 0.2
    }
   }
  }
