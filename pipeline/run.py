@@ -64,7 +64,7 @@ def _main():
                     cache[sid] = season.anomaly_series(history.load_wx(sid), start, end)
                 rain[p["id"]] = cache[sid]
             valid = [p for p in pts if th.get(p["id"])]
-            m = model.train(valid, flood, th, rain, start, end)
+            m = model.train(valid, flood, th, rain, start, end, history_avg=round(bf["complete_years_flood"], 2))
             log["trained"] = {k: v for k, v in m.items() if k != "leads"}
         # 3) Re-score today's data with the new history (no extra API calls).
         if bf["flood_chunks"] or bf["wx_chunks"] or "trained" in log:
