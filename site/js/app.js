@@ -1150,6 +1150,8 @@
     if (R.playing) return stopPlay();
     if (R.day >= R.doc.days - 1) setDay(0, true);
     R.playing = true; R.t = R.day; R.last = 0; setPlayIcon(true);
+    // Phones: fold the bar to one line while the flood plays, so the map is visible (tap ⌃ to expand)
+    if (MOBILE() && !$("replaybar").classList.contains("mini")) { $("replaybar").classList.add("mini"); const mb = $("rbMini"); if (mb) mb.setAttribute("aria-label", "Expand"); }
     const loop = (ts) => {
       if (S.replay !== R || !R.playing) return;
       if (!R.last) R.last = ts;
