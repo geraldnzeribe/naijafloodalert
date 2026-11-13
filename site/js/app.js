@@ -4,7 +4,29 @@
   const LV_COL = ["#19a897", "#f2b632", "#ee7421", "#d2263f"];
   // Brown -> blue for dry -> wet and a yellow -> red heat ramp: readable with colour-blindness and on small screens.
   const SEASON_COL = { drought: "#7f3b08", dry: "#e0a23c", normal: "#b9dc8f", wet: "#4fb3d9", very_wet: "#1f4fa3", dry_season: "#d9c9a8", unknown: "#c3ccd4" };
-  const PLANT_COL = { dry_season: "#d9c9a8", waiting: "#e9a23b", wait_confirm: "#f3d34a", plant: "#1a9850", growing: "#8fd18b", harvest: "#8e5ea8" };
+  const PLANT_COL = { dry_season: "#d9c9a8", waiting: "#e9a23b", wait_confirm: "#f3d34a", plant: "#1a9850", growing: "#8fd18b", harvest_wet: "#4f86c6", harvest_dry: "#8e5ea8", harvest: "#8e5ea8" };
+  // "Harvest" lasts for months and covers almost every state from October, so the map turned one colour.
+  // Split it by what matters to a farmer that week: is it dry enough to dry the crop, or is rain coming?
+  // A state with 4+ weeks without rain is shown as dry season (harvest over in most of the north).
+  function plantKey(st) {
+    if (!st || st.plant !== "harvest") return st ? st.plant : "";
+    if ((st.dry_run || 0) >= 28) return "dry_season";
+    return (st.rain_next7 || 0) >= 5 ? "harvest_wet" : "harvest_dry";
+  }
+  const PL = {
+    en: { harvest_dry: ["Harvest – dry days ahead, good for drying crops", "Harvest (dry)", "Dry weather ahead: a good time to harvest and sun-dry grain before storing it."],
+      harvest_wet: ["Harvest – rain expected, cover drying crops", "Harvest (rain)", "Showers expected this week: harvest between rains, dry crops under cover and keep stored grain off the ground."] },
+    pcm: { harvest_dry: ["Harvest – dry days dey come, e good for drying crops", "Harvest (dry)", "Dry weather dey come: good time to harvest and dry grain for sun before you store am."],
+      harvest_wet: ["Harvest – rain fit fall, cover crops wey you dey dry", "Harvest (rain)", "Rain fit fall this week: harvest when rain no dey, dry crops under cover, no put stored grain for ground."] },
+    ha: { harvest_dry: ["Girbi – kwanaki marasa ruwa na zuwa, lokaci mai kyau na busar da amfanin gona", "Girbi (rani)", "Yanayi mara ruwa na zuwa: lokaci ne mai kyau na girbi da busar da hatsi a rana kafin a adana."],
+      harvest_wet: ["Girbi – ana sa ran ruwan sama, a rufe amfanin gona da ake busarwa", "Girbi (ruwa)", "Ana sa ran ruwan sama a wannan mako: ku yi girbi tsakanin ruwan sama, ku busar da amfanin gona a ƙarƙashin rufi, kada ku ajiye hatsi a ƙasa."] },
+    yo: { harvest_dry: ["Ìkórè – ọjọ́ gbígbẹ ń bọ̀, ó dára fún sísá ohun ọ̀gbìn", "Ìkórè (gbẹ)", "Ojú ọjọ́ gbígbẹ ń bọ̀: àsìkò tó dára láti kórè àti láti sá ọkà sínú oòrùn kí o tó tọ́jú rẹ̀."],
+      harvest_wet: ["Ìkórè – a retí òjò, bo ohun ọ̀gbìn tí ò ń sá", "Ìkórè (òjò)", "A retí òjò lọ́sẹ̀ yìí: kórè láàrin òjò, sá ohun ọ̀gbìn sábẹ́ ìbòrí, má sì fi ọkà tí o tọ́jú sílẹ̀."] },
+    ig: { harvest_dry: ["Owuwe ihe ubi – ụbọchị ọkọchị na-abịa, ọ dị mma maka ịkpọnwụ ihe ubi", "Owuwe (ọkọchị)", "Ihu igwe kpọrọ nkụ na-abịa: oge dị mma iwe ihe ubi na ịkpọnwụ ọka n'anwụ tupu ịchekwa ya."],
+      harvest_wet: ["Owuwe ihe ubi – a na-atụ anya mmiri ozuzo, kpuchie ihe ubi ị na-akpọnwụ", "Owuwe (mmiri)", "A na-atụ anya mmiri ozuzo n'izu a: wee ihe ubi n'etiti mmiri ozuzo, kpọnwụọ ihe ubi n'okpuru mkpuchi, ebula ọka echekwara n'ala."] },
+  };
+  const plantLabel = (k, short) => { const x = (PL[S.lang] || PL.en)[k]; if (x) return short ? x[1] : x[0]; const t = T(); return (short ? (t.plant_short || {})[k] : null) || t.plant[k] || ""; };
+  const plantTip = (k) => { const x = (PL[S.lang] || PL.en)[k]; return x ? x[2] : ((T().farm_tip || {})[k] || ""); };
   const HEAT_STEPS = [[3, "#a50026", "+3 °C or more"], [2, "#e34a33", "+2 to +3 °C"], [1, "#fdae61", "+1 to +2 °C"], [-1, "#fde8c2", "near normal"], [-99, "#6baed6", "cooler than normal"]];
   const heatCol = (a) => (HEAT_STEPS.find(([t]) => a >= t) || HEAT_STEPS[4])[1];
   const MOBILE = () => window.innerWidth <= 860;
@@ -97,7 +119,7 @@
     const night = !!S.replay, dark = darkMq.matches;
     const base = { pane: "states", color: night || dark ? "#d5e6ec" : "#0c2230", weight: night ? 0.8 : 1.1, opacity: night ? 0.3 : 0.45, fillColor: "#fff", fillOpacity: 0 };
     if (!st || S.mode === "flood") return base;
-    const fill = S.mode === "season" ? (SEASON_COL[st.status] || SEASON_COL.unknown) : S.mode === "plant" ? (PLANT_COL[st.plant] || SEASON_COL.unknown) : heatCol(st.tmax_anom ?? 0);
+    const fill = S.mode === "season" ? (SEASON_COL[st.status] || SEASON_COL.unknown) : S.mode === "plant" ? (PLANT_COL[plantKey(st)] || SEASON_COL.unknown) : heatCol(st.tmax_anom ?? 0);
     return { ...base, color: dark ? "#0c1e29" : "#ffffff", weight: 1.4, opacity: 0.95, fillColor: fill, fillOpacity: 0.84 };
   }
   function maskStyle() {
@@ -261,7 +283,10 @@
       note = S.replay ? t.lg_replay : t.lg_flood;
     }
     if (S.mode === "season") rows = Object.keys(SEASON_COL).filter((k) => k !== "unknown").map((k) => row(SEASON_COL[k], t.season[k], (t.season_short || {})[k])).join("");
-    if (S.mode === "plant") rows = Object.keys(PLANT_COL).map((k) => row(PLANT_COL[k], t.plant[k], (t.plant_short || {})[k])).join("");
+    if (S.mode === "plant") {
+      const have = new Set(Object.values((S.data.latest && S.data.latest.states) || {}).map(plantKey));
+      rows = Object.keys(PLANT_COL).filter((k) => k !== "harvest" && (!have.size || have.has(k))).map((k) => row(PLANT_COL[k], plantLabel(k), plantLabel(k, true))).join("");
+    }
     if (S.mode === "heat") { rows = HEAT_STEPS.map(([, c, n]) => row(c, n, n.replace(" °C", "°").replace(" or more", "+").replace(" than normal", ""))).join(""); note = t.lg_heat; }
     let html = `<b>${esc(title)}</b><div class="rows">${rows}</div>${note ? `<div class="lg-note">${esc(note)}</div>` : ""}`;
     if (!dataReady(S.mode)) html += `<div class="nodata">${esc(notReadyText(S.mode))}</div>`;
@@ -352,7 +377,7 @@
     else html += `<ul class="list">${top.map(([id, v]) => { const f = lgaById(id); return f ? `<li data-lga="${id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)} · ML 7-day chance ${Math.round(v[1] * 100)}%</small></span><span class="chip l${v[0]}">${esc(t.lvl[v[0]])}</span></li>` : ""; }).join("")}</ul>`;
     if (states.length) {
       html += `<h3>${esc(t.mode_season)} &amp; ${esc(t.mode_plant).toLowerCase()} by state</h3><ul class="list">` +
-        Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul>`;
+        Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(plantLabel(plantKey(s)))}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul>`;
     }
     el.innerHTML = html;
     bindViewSwitch(); bindLagdo();
@@ -434,7 +459,7 @@
     const head = !lt ? m.checking : atRisk ? m.risk(atRisk) : m.calm;
     const sub = !lt ? "" : atRisk ? m.subRisk : m.subCalm;
     // most common season state, as one plain line
-    const cnt = {}; states.forEach((s) => { cnt[s.plant] = (cnt[s.plant] || 0) + 1; });
+    const cnt = {}; states.forEach((s) => { const k = plantKey(s); cnt[k] = (cnt[k] || 0) + 1; });
     const main = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
     const dry = states.filter((s) => s.status === "drought" || s.status === "dry").length, hot = states.filter((s) => s.heat).length;
     let html = warm + `<div class="hero l${worst}"><div class="hero-ic">${worst ? "⚠️" : "✅"}</div><div><b>${esc(head)}</b><span>${esc(sub)}</span>${upd ? `<small>${esc(m.updated(upd))}</small>` : ""}</div></div>
@@ -443,10 +468,10 @@
       html += `<h3>${esc(m.watch)}</h3><ul class="list">${top.slice(0, 5).map(([id, v]) => { const f = lgaById(id); return f ? `<li data-lga="${id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)}</small></span><span class="chip l${v[0]}">${esc(t.lvl[v[0]])}</span></li>` : ""; }).join("")}</ul>`;
       if (top.length > 5) html += `<button class="linkbtn" id="mAll">${esc(m.seeAll(top.length))} →</button>`;
     }
-    if (main) html += `<div class="season-line"><b>🌾 ${esc(m.season)}</b><span>${esc(m.inStates(t.plant[main[0]] || "", main[1], states.length))}${dry ? " " + esc(m.dry(dry)) : ""}${hot ? " 🔥 " + esc(m.hot(hot)) : ""}</span><button class="linkbtn" id="mFarm">${esc(m.farmBtn)} →</button></div>`;
+    if (main) html += `<div class="season-line"><b>🌾 ${esc(m.season)}</b><span>${esc(m.inStates(plantLabel(main[0]), main[1], states.length))}${dry ? " " + esc(m.dry(dry)) : ""}${hot ? " 🔥 " + esc(m.hot(hot)) : ""}</span><button class="linkbtn" id="mFarm">${esc(m.farmBtn)} →</button></div>`;
     html += lagdoCard(false);
     if (states.length) html += `<details class="fold"><summary>${esc(m.allStates(states.length))}</summary><ul class="list">` +
-      Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul></details>`;
+      Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(plantLabel(plantKey(s)))}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul></details>`;
     html += `<div class="minilinks"><a href="lite/${S.lang}/index.html">📶 ${esc(m.lite)}</a><a href="ussd.html">📱 ${esc(m.basic)}</a><a href="story-2022.html">🌾 ${esc(m.story)}</a></div>`;
     el.innerHTML = html; el.scrollTop = 0;
     bindLagdo();
@@ -476,6 +501,7 @@
     nav.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.go === cur));
   }
   function goTo(where) {
+    if (where !== "replay") { if (S.lapse) stopLapse(); if (S.replay) exitReplay(); }
     if (document.body.dataset.sheet === "min") sheetState("half");
     if (where === "home" || where === "farm" || where === "nema") {
       S.sel = null; if (spotMarker) map.removeLayer(spotMarker);
@@ -493,6 +519,11 @@
     S.onLangNav();
     document.body.appendChild(nav);
     nav.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.go === "more") return openMore(); goTo(b.dataset.go); });
+    // Replay bar: a minimise button so the map stays visible while the replay plays
+    const mini = document.createElement("button"); mini.id = "rbMini"; mini.className = "iconbtn rbmini"; mini.setAttribute("aria-label", "Minimise");
+    mini.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    $("rbClose").before(mini);
+    mini.addEventListener("click", () => { const on = $("replaybar").classList.toggle("mini"); mini.setAttribute("aria-label", on ? "Expand" : "Minimise"); sizeRibbon(); });
     // Layers: one button that opens the map-layer and base-map choices
     const ctl = document.querySelector(".mapctl");
     const lb = document.createElement("button"); lb.id = "layersBtn"; lb.className = "layersbtn"; lb.setAttribute("aria-expanded", "false");
@@ -537,14 +568,14 @@
     const states = Object.entries(lt.states || {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
     let html = viewSwitch() + `<h2>Farm outlook</h2><p class="muted small">Planting signal, rain and heat for every state, compared with the same time of year since 2012. Tap a state to zoom in, or tap your community on the map.</p>`;
     if (!states.length) html += `<div class="warmup">Season data appears after the first full daily update.</div>`;
-    const counts = {}; states.forEach(([, s]) => { counts[s.plant] = (counts[s.plant] || 0) + 1; });
-    html += `<div class="cards">${["plant", "growing", "wait_confirm", "waiting", "dry_season", "harvest"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big"><i class="dot" style="background:${PLANT_COL[k]}"></i>${counts[k]}</b><span>${esc(t.plant[k])}</span></div>`).join("")}</div>`;
+    const counts = {}; states.forEach(([, s]) => { const k = plantKey(s); counts[k] = (counts[k] || 0) + 1; });
+    html += `<div class="cards">${["plant", "growing", "wait_confirm", "waiting", "harvest_dry", "harvest_wet", "dry_season"].filter((k) => counts[k]).map((k) => `<div class="card"><b class="big"><i class="dot" style="background:${PLANT_COL[k]}"></i>${counts[k]}</b><span>${esc(plantLabel(k))}</span></div>`).join("")}</div>`;
     const ff = (S.data.lgas || []).map((f) => ({ f: f.properties, r: farmAdvice(f.properties.id, f.properties.lat) })).filter((x) => x.r.has && x.r.a)
       .sort((x, y) => y.r.a.level - x.r.a.level || x.r.a.days - y.r.a.days);
     html += `<h3>🌾 Riverside farms: harvest before the flood</h3>` + (ff.length
       ? `<ul class="list">${ff.slice(0, 25).map(({ f, r }) => `<li data-lga="${f.id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)} · ${esc(r.a.river)} · ${r.a.source === "ml" ? `likely within ${r.a.lead} days` : r.a.days ? `in about ${r.a.days} days` : "now"}</small></span><span class="chip l${r.a.level}">${esc(t.lvl[r.a.level])}</span></li>`).join("")}</ul>`
       : `<p class="small muted">No riverside farming community is expected to flood in the next 30 days. <a href="story-2022.html">See how much warning farmers could have had in 2022 →</a></p>`);
-    html += (MOBILE() ? `<details class="fold"><summary>${esc(mt().byState)}</summary>` : `<h3>By state</h3>`) + `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
+    html += (MOBILE() ? `<details class="fold"><summary>${esc(mt().byState)}</summary>` : `<h3>By state</h3>`) + `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(plantLabel(plantKey(s)))}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
         <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
       <p class="small muted">Small bars: rain forecast for the next 7 days.</p>` + (MOBILE() ? `</details>` : "");
     const el = $("tab-today"); el.innerHTML = html; el.scrollTop = 0; bindViewSwitch(); syncNav();
@@ -687,14 +718,14 @@
     if (S.view === "farmer") html += farmAdviceCard(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat);
     if (S.view === "farmer" && a.season) {
       const s = a.season;
-      html += `<h3>Farm outlook · ${esc(sel.lga.state)}</h3><p>${chipCol(PLANT_COL[s.plant] || SEASON_COL.unknown, t.plant[s.plant] || "")}</p>
-        <p class="small">${esc((t.farm_tip || {})[s.plant] || "")}</p>${s.heat ? `<p class="small">🔥 ${esc(t.heat_tip)}</p>` : ""}
+      html += `<h3>Farm outlook · ${esc(sel.lga.state)}</h3><p>${chipCol(PLANT_COL[plantKey(s)] || SEASON_COL.unknown, plantLabel(plantKey(s)))}</p>
+        <p class="small">${esc(plantTip(plantKey(s)))}</p>${s.heat ? `<p class="small">🔥 ${esc(t.heat_tip)}</p>` : ""}
         <h4>${esc(t.next7)}</h4>${rainBars(s.rain_days)}${s.dry_run ? `<p class="small muted">${esc(t.dry_run(s.dry_run))}</p>` : ""}`;
     }
     const fold = MOBILE();
     if (fold) {
       if (S.view !== "farmer" && (farmAdvice(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat) || {}).a) html += farmAdviceCard(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat);
-      if (S.view !== "farmer" && a.season) html += `<div class="season-line"><b>🌾 ${esc(t.plant[a.season.plant] || "")}</b><span>${esc((t.farm_tip || {})[a.season.plant] || "")}</span></div>`;
+      if (S.view !== "farmer" && a.season) html += `<div class="season-line"><b>🌾 ${esc(plantLabel(plantKey(a.season)))}</b><span>${esc(plantTip(plantKey(a.season)))}</span></div>`;
       html += `<details class="fold" id="pdetails"><summary>${esc(mt().details)}</summary>`;
     }
     if (a.main && mp) {
@@ -722,7 +753,7 @@
           <dt>Rain expected, next 7 days</dt><dd>${s.rain_next7 != null ? Math.round(s.rain_next7) + " mm" : "–"}</dd>
           <dt>Max temperature (7-day)</dt><dd>${s.tmax7 ?? "–"} °C ${s.tmax_anom != null ? `(${s.tmax_anom > 0 ? "+" : ""}${s.tmax_anom} °C)` : ""}</dd>
           <dt>Heat</dt><dd>${s.heat ? "🔥 " + esc(t.heat) : esc(t.no_heat)}</dd>
-          <dt>${esc(t.mode_plant)}</dt><dd>${esc(t.plant[s.plant] || "–")}</dd>
+          <dt>${esc(t.mode_plant)}</dt><dd>${esc(plantLabel(plantKey(s)) || "–")}</dd>
           ${s.onset ? `<dt>Rains started</dt><dd>${fmtDate(s.onset, { day: "numeric", month: "short", year: "numeric" })}</dd>` : ""}
         </dl>
         <p class="note">Season figures compare this state's recent rain and temperature with the same time of year since 2012 (ERA5 reanalysis). Planting signal: 20 mm in 3 days with no 7-day dry spell in the following 3 weeks.</p>`;
