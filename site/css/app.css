@@ -368,3 +368,25 @@ details.fold[open] > summary::after { transform: rotate(180deg); }
   .mm-card small { display: block; color: var(--muted); font-size: .82rem; }
   .place-head h2 { font-size: 1.5rem; }
 }
+
+/* replay bar: minimise button (phones) */
+.rbmini { display: none; }
+@media (max-width: 860px) {
+  .mapctl.open { z-index: 1350; }
+  .rb-head { gap: 6px; }
+  .rb-head .rb-when { flex: 1; min-width: 0; }
+  .rbmini { display: inline-grid; place-items: center; }
+  .replaybar .rb-ribbon { height: 54px; }
+  .replaybar .rb-ribbon input::-webkit-slider-thumb { height: 54px; }
+  .replaybar .pill { min-height: 40px; }
+  .replaybar .playbtn { width: 52px; height: 52px; }
+  /* minimised: one slim row with play, date and the expand/close buttons */
+  .replaybar.mini { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+  .replaybar.mini .rb-ribbon, .replaybar.mini .rb-ctl .pill, .replaybar.mini .rb-count { display: none; }
+  .replaybar.mini .rb-ctl { order: -1; }
+  .replaybar.mini .rb-head { flex: 1; align-items: center; }
+  .replaybar.mini .rb-when > b { font-size: 1.05rem; }
+  .replaybar.mini .playbtn { width: 46px; height: 46px; margin: 0; }
+  .replaybar.mini .rbmini svg { transform: rotate(180deg); }
+}
+.replaybar[hidden] { display: none !important; }
