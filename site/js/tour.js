@@ -62,6 +62,79 @@
       ussd: "See the basic-phone (USSD) menu",
       story: "See how much warning farmers for get for 2022",
     },
+    // Hausa, Yorùbá and Igbo: first drafts awaiting review by native speakers.
+    ha: {
+      hi: "Barka da zuwa NaijaFloodAlert",
+      intro: "Jagora kyauta kan ambaliya da noma ga kowace al'umma a Najeriya. Yana duba koguna da ruwan sama kowace rana, kuma yana gaya maka cikin sauƙaƙan kalmomi ko ambaliya za ta iya shafar yankinka da abin da za ka yi.",
+      lang: "Zaɓi harshenka",
+      go: "Nuna min yadda yake aiki", skip: "Tsallake, zan duba da kaina",
+      next: "Gaba", back: "Baya", done: "Na gane", close: "Rufe jagora",
+      step: (i, n) => `Mataki ${i} cikin ${n}`,
+      help: "Yadda ake amfani da shafin",
+      steps: {
+        search: ["Nemi yankinka", "Rubuta sunan garinka, ƙauyenka ko ƙaramar hukumarka a nan, sannan ka taɓa shi a jerin. Za ka ga haɗarin ambaliya, ruwan sama da shawarwarin noma na wurin."],
+        map: ["Fahimci launuka", "Launukan taswira suna nuna haɗarin ambaliya. Kore ko toka: babu matsala; rawaya: a kula; ruwan lemu: gargaɗi; ja: haɗari mai tsanani. Taɓa kowane wuri a taswira don ganin ƙari."],
+        views: ["Zaɓi abin da ya dace da kai", "Jama'a: cikakken hoto. Manomi: lokacin shuka, lokacin girbi, da gonakin bakin kogi da ya kamata su yi girbi kafin ambaliya. Gaggawa: jerin wurare don NEMA, SEMA da ƙungiyoyi."],
+        modes: ["Canja abin da taswira ke nunawa", "Haɗarin ambaliya, ruwan saman wannan yanayi, lokacin shuka, ko zafi. Taɓa ɗaya, taswira za ta canza."],
+        tabs: ["Ƙarin abubuwa", "Tarihi: kalli ambaliyar baya kamar ta 2022, kowace rana. Samfuri: yadda hasashen yake daidai. Game da: inda bayanan suka fito."],
+        lang: ["Harshenka", "Canja tsakanin Turanci, Pidgin, Hausa, Yarbanci da Igbo a kowane lokaci."],
+        layers: ["Canja abin da taswira ke nunawa", "Taɓa nan don canja taswira tsakanin haɗarin ambaliya, ruwan saman wannan yanayi, lokacin shuka da zafi, ko don ganin hoton tauraron ɗan adam."],
+        nav: ["Zagaya shafin", "Gida: yanayin ambaliya da yankinka. Noma: shuka, girbi da shawarwari ga gonakin bakin kogi. Tarihi: kalli ambaliyar baya kamar ta 2022. Ƙari: jerin gaggawa, daidaiton hasashe, shafuka masu ƙaramin data da wannan jagora."],
+      },
+      endT: "Ka shirya",
+      endB: "Taɓa maɓallin ? a sama (ko Ƙari → Yadda ake amfani da shafin) a kowane lokaci don sake ganin wannan jagora.",
+      lite: "Intanet a hankali ko ƙaramar waya? Yi amfani da shafuka masu ƙaramin data",
+      ussd: "Duba menu na ƙaramar waya (USSD)",
+      story: "Duba gargaɗin da manoma za su samu a 2022",
+    },
+    yo: {
+      hi: "Ẹ kú àbọ̀ sí NaijaFloodAlert",
+      intro: "Ìtọ́sọ́nà ọ̀fẹ́ lórí ìkún omi àti iṣẹ́ àgbẹ̀ fún gbogbo agbègbè ní Nàìjíríà. Ó ń ṣàyẹ̀wò odò àti òjò lójoojúmọ́, ó sì ń sọ fún ọ ní èdè tó rọrùn bóyá ìkún omi lè dé agbègbè rẹ àti ohun tí o yẹ kí o ṣe.",
+      lang: "Yan èdè rẹ",
+      go: "Fi bí ó ṣe ń ṣiṣẹ́ hàn mí", skip: "Fò ó, màá wò ó fúnra mi",
+      next: "Tẹ̀síwájú", back: "Padà", done: "Ó yé mi", close: "Pa ìtọ́sọ́nà dé",
+      step: (i, n) => `Ìgbésẹ̀ ${i} nínú ${n}`,
+      help: "Bí a ṣe ń lo ojú-òpó yìí",
+      steps: {
+        search: ["Wá agbègbè rẹ", "Tẹ orúkọ ìlú, abúlé tàbí ìjọba ìbílẹ̀ rẹ síbí, lẹ́yìn náà tẹ̀ ẹ́ nínú àkójọ. Wàá rí ewu ìkún omi, òjò àti ìmọ̀ràn oko fún ibẹ̀."],
+        map: ["Mọ ìtumọ̀ àwọ̀", "Àwọ̀ orí máàpù ń fi ewu ìkún omi hàn. Ewé tàbí eérú: kò sí ewu; òféèfé: ẹ ṣọ́ra; ọsàn: ìkìlọ̀; pupa: ewu ńlá. Tẹ ibikíbi lórí máàpù láti rí i sí i."],
+        views: ["Yan èyí tó bá ọ mu", "Gbogbo ènìyàn: àwòrán gbogbogbò. Àgbẹ̀: ìgbà gbìn, ìgbà ìkórè, àti oko etí odò tó yẹ kí wọ́n kórè ṣáájú ìkún omi. Pàjáwìrì: àkójọ fún NEMA, SEMA àti àwọn àjọ."],
+        modes: ["Yí ohun tí máàpù ń fi hàn padà", "Ewu ìkún omi, òjò àsìkò yìí, àkókò gbìn, tàbí ooru. Tẹ ọ̀kan, máàpù yóò yí padà."],
+        tabs: ["Àwọn nǹkan mìíràn", "Ìtàn: wo ìkún omi àtijọ́ bíi ti 2022, ọjọ́ dé ọjọ́. Àwòṣe: bí àsọtẹ́lẹ̀ ṣe péye tó. Nípa: ibi tí ìsọfúnni ti wá."],
+        lang: ["Èdè rẹ", "Yí padà láàrin Gẹ̀ẹ́sì, Pidgin, Hausa, Yorùbá àti Igbo nígbàkúgbà."],
+        layers: ["Yí ohun tí máàpù ń fi hàn padà", "Tẹ ibí láti yí máàpù padà láàrin ewu ìkún omi, òjò àsìkò yìí, àkókò gbìn àti ooru, tàbí láti rí àwòrán sátẹ́láìtì."],
+        nav: ["Rìn káàkiri", "Ilé: ipò ìkún omi àti agbègbè rẹ. Oko: gbìngbìn, ìkórè àti ìmọ̀ràn fún oko etí odò. Ìtàn: wo ìkún omi àtijọ́ bíi ti 2022. Síwájú sí i: àkójọ pàjáwìrì, bí ó ṣe péye tó, ojú-ewé data kékeré àti ìtọ́sọ́nà yìí."],
+      },
+      endT: "O ti ṣetán",
+      endB: "Tẹ bọ́tìnnì ? lókè (tàbí Síwájú sí i → Bí a ṣe ń lo ojú-òpó yìí) nígbàkúgbà láti tún rí ìtọ́sọ́nà yìí.",
+      lite: "Íntánẹ́ẹ̀tì ń lọ́ra tàbí fóònù kékeré? Lo ojú-ewé data kékeré",
+      ussd: "Wo àkójọ fóònù kékeré (USSD)",
+      story: "Wo ìkìlọ̀ tí àwọn àgbẹ̀ ìbá ti ní ní 2022",
+    },
+    ig: {
+      hi: "Nnọọ na NaijaFloodAlert",
+      intro: "Ntuziaka n'efu gbasara iju mmiri na ọrụ ugbo maka obodo ọ bụla na Naịjirịa. Ọ na-enyocha osimiri na mmiri ozuzo kwa ụbọchị, ma gwa gị n'okwu dị mfe ma iju mmiri nwere ike ịbịa n'ógbè gị na ihe ị ga-eme.",
+      lang: "Họrọ asụsụ gị",
+      go: "Gosi m otu o si arụ ọrụ", skip: "Wụfee, m ga-elele ya n'onwe m",
+      next: "Ọzọ", back: "Laghachi", done: "Aghọtala m", close: "Mechie ntuziaka",
+      step: (i, n) => `Nzọụkwụ ${i} n'ime ${n}`,
+      help: "Otu esi eji saịtị a",
+      steps: {
+        search: ["Chọta ógbè gị", "Dee aha obodo, obodo nta ma ọ bụ ọchịchị ime obodo gị ebe a, wee pịa ya na ndepụta. Ị ga-ahụ ihe ize ndụ iju mmiri, mmiri ozuzo na ndụmọdụ ugbo maka ebe ahụ."],
+        map: ["Ghọta agba", "Agba dị na maapụ na-egosi ihe ize ndụ iju mmiri. Akwụkwọ ndụ ma ọ bụ ntụ: ọ dị mma; odo: lezie anya; oroma: ịdọ aka na ntị; uhie: ihe ize ndụ dị ukwuu. Pịa ebe ọ bụla na maapụ ka ịhụkwuo."],
+        views: ["Họrọ nke dabara gị", "Ọha: foto zuru oke. Onye ọrụ ugbo: oge ịkụ, oge owuwe ihe ubi, na ugbo dị n'akụkụ osimiri kwesịrị iwe ihe ubi tupu iju mmiri. Mberede: ndepụta maka NEMA, SEMA na otu enyemaka."],
+        modes: ["Gbanwee ihe maapụ na-egosi", "Ihe ize ndụ iju mmiri, mmiri ozuzo oge a, oge ịkụ, ma ọ bụ okpomọkụ. Pịa otu, maapụ ga-agbanwe."],
+        tabs: ["Ihe ndị ọzọ", "Akụkọ: lelee iju mmiri gara aga dịka nke 2022, ụbọchị n'ụbọchị. Ihe nlereanya: otú amụma si ziri ezi. Gbasara: ebe data si bịa."],
+        lang: ["Asụsụ gị", "Gbanwee n'etiti Bekee, Pidgin, Hausa, Yorùbá na Igbo oge ọ bụla."],
+        layers: ["Gbanwee ihe maapụ na-egosi", "Pịa ebe a ka ị gbanwee maapụ n'etiti ihe ize ndụ iju mmiri, mmiri ozuzo oge a, oge ịkụ na okpomọkụ, ma ọ bụ ka ịhụ foto satịlaịtị."],
+        nav: ["Gagharịa", "Ụlọ: ọnọdụ iju mmiri na ógbè gị. Ugbo: ịkụ, owuwe ihe ubi na ndụmọdụ maka ugbo dị n'akụkụ osimiri. Akụkọ: lelee iju mmiri gara aga dịka nke 2022. Ndị ọzọ: ndepụta mberede, otú o si ziri ezi, peeji data nta na ntuziaka a."],
+      },
+      endT: "Ị dị njikere",
+      endB: "Pịa bọtịnụ ? dị n'elu (ma ọ bụ Ndị ọzọ → Otu esi eji saịtị a) oge ọ bụla ka ịhụ ntuziaka a ọzọ.",
+      lite: "Ịntanetị na-adị nwayọ ma ọ bụ obere ekwentị? Jiri peeji data nta",
+      ussd: "Lelee menu obere ekwentị (USSD)",
+      story: "Lelee ịdọ aka na ntị ndị ọrụ ugbo gaara enweta na 2022",
+    },
   };
   const tx = () => TXT[lang()] || TXT.en;
   const LANGS = [["en", "English"], ["pcm", "Pidgin"], ["ha", "Hausa"], ["yo", "Yorùbá"], ["ig", "Igbo"]];
@@ -221,5 +294,12 @@
     }, 250);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  // If the language is changed from the header while the guide is open, redraw it in the new language.
+  document.addEventListener("change", (e) => {
+    if (!e.target || e.target.id !== "lang") return;
+    const h = $(".tour-help"); if (h) { h.title = tx().help; h.setAttribute("aria-label", tx().help); }
+    if (!card) return;
+    if (idx < 0) welcome(); else if (idx >= steps.length) finish(); else place(steps[idx]);
+  });
   window.NFA_TOUR = { open: welcome };
 })();
