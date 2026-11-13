@@ -1,6 +1,11 @@
 {
  "runs": [
   {
+   "t": "2026-11-13T00:40+00:00",
+   "calls": 0,
+   "points": 154
+  },
+  {
    "t": "2026-11-12T19:08+00:00",
    "calls": 2898,
    "points": 154
@@ -122,43 +127,16 @@
   }
  ],
  "last": {
-  "started": "2026-11-12T18:58+00:00",
-  "network_complete": true,
+  "started": "2026-11-13T00:40+00:00",
+  "error": "RuntimeError('failed after retries: https://api.open-meteo.com/v1/forecast')",
+  "finished": "2026-11-13T00:40+00:00",
   "points": 154,
-  "daily": "reused",
-  "backfill": {
-   "flood_chunks": 8,
-   "wx_chunks": 4,
-   "complete_years_flood": 11.324675324675324,
-   "complete_years_wx": 11.0
-  },
-  "levels": {
-   "0": 154,
-   "1": 0,
-   "2": 0,
-   "3": 0
-  },
-  "history_years": [
-   2015,
-   2016,
-   2017,
-   2018,
-   2019,
-   2020,
-   2021,
-   2022,
-   2023,
-   2024,
-   2025,
-   2026
-  ],
-  "api_calls_used": 2898,
-  "finished": "2026-11-12T19:08+00:00"
+  "api_calls_used": 0
  },
  "badge": {
   "schemaVersion": 1,
   "label": "data updated",
-  "message": "2026-11-12",
+  "message": "2026-11-13",
   "color": "1565c0"
  }
 }
