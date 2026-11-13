@@ -208,6 +208,7 @@
   function applyMode(animated) {
     syncModeButtons();
     document.body.dataset.mode = S.mode;
+    if (S.onModeLabel) S.onModeLabel();
     if (!animated || reduceMq.matches || !map) return restyle();
     const panes = ["lgas", "states", "rivers", "fx"].map((n) => map.getPane(n)).filter(Boolean);
     panes.forEach((p) => p.classList.add("fading"));
@@ -336,6 +337,7 @@
     const states = Object.values((lt && lt.states) || {});
     const drought = states.filter((s) => s.status === "drought" || s.status === "dry").length;
     const plant = states.filter((s) => s.plant === "plant").length;
+    if (MOBILE()) return mobileHome(el, html, atRisk, states);
     html = viewSwitch() + html + `<p class="muted">${esc(t.tagline)}. <a href="lite/${S.lang}/index.html">Low-data version</a> · <a href="ussd.html">Basic-phone (USSD) demo</a> · <a href="story-2022.html">2022 floods replayed</a></p>
       <div class="cards">
         <div class="card"><b class="big">${atRisk}</b><span>communities (LGAs) at Watch or above, next 30 days</span></div>
@@ -357,6 +359,103 @@
     el.querySelectorAll("[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const s = S.data.states.find((x) => x.properties.id === li.dataset.state); if (s) map.fitBounds(L.geoJSON(s).getBounds()); }));
   }
+  // Phones: the answer first, one big way to find your place, and everything else folded away.
+  function mobileHome(el, warm, atRisk, states) {
+    const t = T(), lt = S.data.latest;
+    const top = Object.entries((lt && lt.lgas) || {}).filter(([, v]) => v[0] > 0).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]);
+    const worst = top.length ? top[0][1][0] : 0;
+    const upd = lt && lt.generated ? fmtDate(lt.generated.slice(0, 10), { weekday: "short", day: "numeric", month: "short" }) : "";
+    const head = !lt ? "Checking the rivers…" : atRisk ? `${atRisk} ${atRisk === 1 ? "community" : "communities"} may flood in the next 30 days` : "No flood expected in Nigeria in the next 30 days";
+    const sub = !lt ? "" : atRisk ? "Find your area to see if it is one of them, and what to do." : "Rivers are at normal levels. Find your area for local rain and farm advice.";
+    // most common season state, as one plain line
+    const cnt = {}; states.forEach((s) => { cnt[s.plant] = (cnt[s.plant] || 0) + 1; });
+    const main = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+    const dry = states.filter((s) => s.status === "drought" || s.status === "dry").length, hot = states.filter((s) => s.heat).length;
+    let html = warm + `<div class="hero l${worst}"><div class="hero-ic">${worst ? "⚠️" : "✅"}</div><div><b>${esc(head)}</b><span>${esc(sub)}</span>${upd ? `<small>Updated ${esc(upd)} · checked 3 times a day</small>` : ""}</div></div>
+      <div class="bigbtns"><button class="bigbtn" id="mFind">🔍 Find my area</button><button class="bigbtn ghost" id="mLoc">📍 Use my location</button></div>`;
+    if (top.length) {
+      html += `<h3>Places to watch</h3><ul class="list">${top.slice(0, 5).map(([id, v]) => { const f = lgaById(id); return f ? `<li data-lga="${id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)}</small></span><span class="chip l${v[0]}">${esc(t.lvl[v[0]])}</span></li>` : ""; }).join("")}</ul>`;
+      if (top.length > 5) html += `<button class="linkbtn" id="mAll">See all ${top.length} places →</button>`;
+    }
+    if (main) html += `<div class="season-line"><b>🌾 Farming season</b><span>${esc(t.plant[main[0]] || "")} in ${main[1]} of ${states.length} states.${dry ? ` ${dry} drier than normal.` : ""}${hot ? ` 🔥 Heat in ${hot}.` : ""}</span><button class="linkbtn" id="mFarm">Farm advice →</button></div>`;
+    html += lagdoCard(false);
+    if (states.length) html += `<details class="fold"><summary>All ${states.length} states</summary><ul class="list">` +
+      Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul></details>`;
+    html += `<div class="minilinks"><a href="lite/${S.lang}/index.html">📶 Low-data version</a><a href="ussd.html">📱 Basic phone</a><a href="story-2022.html">🌾 2022 floods</a></div>`;
+    el.innerHTML = html; el.scrollTop = 0;
+    bindLagdo();
+    $("mFind").addEventListener("click", () => { const q = $("q"); q.focus(); q.select(); });
+    $("mLoc").addEventListener("click", locateMe);
+    const all = $("mAll"); if (all) all.addEventListener("click", () => setView("nema"));
+    const fb = $("mFarm"); if (fb) fb.addEventListener("click", () => setView("farmer"));
+    el.querySelectorAll("[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
+    el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const s = S.data.states.find((x) => x.properties.id === li.dataset.state); if (s) { map.fitBounds(L.geoJSON(s).getBounds()); sheetState("min"); } }));
+    syncNav();
+  }
+  function locateMe() {
+    if (!navigator.geolocation) return toast("Location is not available on this device. Use 🔍 Find my area instead.");
+    toast("Finding your location…");
+    navigator.geolocation.getCurrentPosition((p) => {
+      const { latitude: la, longitude: lo } = p.coords;
+      if (!lgaAt(la, lo)) return toast("You seem to be outside Nigeria. Use 🔍 Find my area instead.");
+      selectLocation(la, lo, null, null, true);
+    }, () => toast("Could not get your location. Allow location access, or use 🔍 Find my area."), { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+  }
+
+  // ---------- phone chrome: bottom navigation, one Layers button, a More menu ----------
+  function syncNav() {
+    const nav = $("mnav"); if (!nav) return;
+    const tab = (document.querySelector(".tabs button.on") || {}).dataset;
+    const cur = !tab || tab.tab === "today" ? (S.view === "farmer" ? "farm" : S.view === "nema" ? "more" : "home") : tab.tab === "replay" ? "replay" : "more";
+    nav.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.go === cur));
+  }
+  function goTo(where) {
+    if (document.body.dataset.sheet === "min") sheetState("half");
+    if (where === "home" || where === "farm" || where === "nema") {
+      S.sel = null; if (spotMarker) map.removeLayer(spotMarker);
+      switchTab("today");
+      const v = where === "home" ? "public" : where === "farm" ? "farmer" : "nema";
+      if (S.view !== v) setView(v); else renderToday();
+    } else switchTab(where);
+    syncNav();
+  }
+  function initMobileChrome() {
+    const nav = document.createElement("nav"); nav.id = "mnav"; nav.className = "mnav"; nav.setAttribute("aria-label", "Main");
+    const items = [["home", "🏠", "Home"], ["farm", "🌾", "Farm"], ["replay", "⏪", "Replay"], ["more", "☰", "More"]];
+    nav.innerHTML = items.map(([k, ic, n]) => `<button data-go="${k}"><i aria-hidden="true">${ic}</i><span>${n}</span></button>`).join("");
+    document.body.appendChild(nav);
+    nav.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.go === "more") return openMore(); goTo(b.dataset.go); });
+    // Layers: one button that opens the map-layer and base-map choices
+    const ctl = document.querySelector(".mapctl");
+    const lb = document.createElement("button"); lb.id = "layersBtn"; lb.className = "layersbtn"; lb.setAttribute("aria-expanded", "false");
+    ctl.prepend(lb);
+    const label = () => { lb.innerHTML = `<span aria-hidden="true">🗺️</span> ${esc(T()["mode_" + S.mode] || "Layers")} <span aria-hidden="true">▾</span>`; };
+    label(); S.onModeLabel = label;
+    lb.addEventListener("click", () => { const o = ctl.classList.toggle("open"); lb.setAttribute("aria-expanded", o); });
+    ctl.addEventListener("click", (e) => { if (e.target.closest("#modes button, #bases button")) { ctl.classList.remove("open"); lb.setAttribute("aria-expanded", "false"); setTimeout(label, 0); } });
+    document.addEventListener("click", (e) => { if (!e.target.closest(".mapctl")) { ctl.classList.remove("open"); lb.setAttribute("aria-expanded", "false"); } });
+  }
+  function openMore() {
+    let m = $("moreMenu");
+    if (m) { m.remove(); return; }
+    m = document.createElement("div"); m.id = "moreMenu"; m.className = "moremenu";
+    const rows = [["nema", "🚑", "Emergency view", "Ranked list for NEMA, SEMA and NGOs"], ["model", "📊", "How accurate is it?", "Test results of the flood model"], ["about", "ℹ️", "About", "Where the data comes from"],
+      ["@lite/" + S.lang + "/index.html", "📶", "Low-data version", "Text pages that load on 2G"], ["@ussd.html", "📱", "Basic-phone menu", "USSD demo, no internet needed"], ["@story-2022.html", "🌾", "2022 floods replayed", "How much warning farmers had"],
+      ["tour", "❓", "How to use this site", "Short guided tour"]];
+    m.innerHTML = `<div class="mm-card" role="dialog" aria-label="More"><div class="mm-grip"></div>${rows.map(([k, ic, n, d]) => k[0] === "@" ? `<a href="${k.slice(1)}"><i>${ic}</i><span><b>${n}</b><small>${d}</small></span></a>` : `<button data-k="${k}"><i>${ic}</i><span><b>${n}</b><small>${d}</small></span></button>`).join("")}</div>`;
+    document.body.appendChild(m);
+    m.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-k]");
+      if (!b && e.target.closest(".mm-card")) return;
+      m.remove();
+      if (!b) return;
+      const k = b.dataset.k;
+      if (k === "tour") { if (window.NFA_TOUR) window.NFA_TOUR.open(); return; }
+      if (k === "nema") goTo("nema"); else { goTo(k); sheetState("full"); }
+      const nav = $("mnav"); nav.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.go === "more"));
+    });
+  }
+
   function rainBars(days) {
     if (!days || !days.length) return "";
     const max = Math.max(20, ...days);
@@ -377,10 +476,10 @@
     html += `<h3>🌾 Riverside farms: harvest before the flood</h3>` + (ff.length
       ? `<ul class="list">${ff.slice(0, 25).map(({ f, r }) => `<li data-lga="${f.id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)} · ${esc(r.a.river)} · ${r.a.source === "ml" ? `likely within ${r.a.lead} days` : r.a.days ? `in about ${r.a.days} days` : "now"}</small></span><span class="chip l${r.a.level}">${esc(t.lvl[r.a.level])}</span></li>`).join("")}</ul>`
       : `<p class="small muted">No riverside farming community is expected to flood in the next 30 days. <a href="story-2022.html">See how much warning farmers could have had in 2022 →</a></p>`);
-    html += `<h3>By state</h3><ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
+    html += (MOBILE() ? `<details class="fold"><summary>Planting and rain, state by state</summary>` : `<h3>By state</h3>`) + `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
         <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
-      <p class="small muted">Small bars: rain forecast for the next 7 days.</p>`;
-    const el = $("tab-today"); el.innerHTML = html; bindViewSwitch();
+      <p class="small muted">Small bars: rain forecast for the next 7 days.</p>` + (MOBILE() ? `</details>` : "");
+    const el = $("tab-today"); el.innerHTML = html; el.scrollTop = 0; bindViewSwitch(); syncNav();
     el.querySelectorAll("li[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const f = S.data.states.find((x) => x.properties.id === li.dataset.state); if (f) map.fitBounds(L.geoJSON(f).getBounds()); }));
   }
@@ -411,7 +510,7 @@
     html += `<h3>At-risk communities</h3>`;
     if (!rows.length) html += `<p class="muted small">No community is above normal right now.</p>`;
     else html += `<table class="metrics nema"><tr><th>LGA</th><th>State</th><th>Level</th><th>7-day ML</th><th>From</th></tr>` + rows.slice(0, 80).map((r) => `<tr data-lga="${r.lid}"><td>${esc(r.name)}</td><td>${esc(r.state)}</td><td><span class="chip l${r.level}">${esc(t.lvl[r.level])}</span></td><td>${Math.round(100 * r.ml7)}%</td><td>${r.first ? fmtDate(r.first) : "–"}</td></tr>`).join("") + `</table>`;
-    const el = $("tab-today"); el.innerHTML = html; bindViewSwitch(); bindLagdo();
+    const el = $("tab-today"); el.innerHTML = html; el.scrollTop = 0; bindViewSwitch(); bindLagdo(); syncNav();
     el.querySelectorAll("tr[data-lga]").forEach((tr) => tr.addEventListener("click", () => { const f = lgaById(tr.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     $("csv").addEventListener("click", () => {
       const lines = [["lga", "state", "level", "level_name", "ml_7day_chance", "river", "first_day_above_normal", "peak_date"].join(",")]
@@ -524,6 +623,12 @@
         <p class="small">${esc((t.farm_tip || {})[s.plant] || "")}</p>${s.heat ? `<p class="small">🔥 ${esc(t.heat_tip)}</p>` : ""}
         <h4>${esc(t.next7)}</h4>${rainBars(s.rain_days)}${s.dry_run ? `<p class="small muted">${esc(t.dry_run(s.dry_run))}</p>` : ""}`;
     }
+    const fold = MOBILE();
+    if (fold) {
+      if (S.view !== "farmer" && (farmAdvice(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat) || {}).a) html += farmAdviceCard(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat);
+      if (S.view !== "farmer" && a.season) html += `<div class="season-line"><b>🌾 ${esc(t.plant[a.season.plant] || "")}</b><span>${esc((t.farm_tip || {})[a.season.plant] || "")}</span></div>`;
+      html += `<details class="fold" id="pdetails"><summary>See river chart and more details</summary>`;
+    }
     if (a.main && mp) {
       html += `<h3>${esc(mp.river)} near ${esc(mp.name)}</h3>
         <dl class="kv"><dt>Flow today</dt><dd>${fmtQ(a.main.q_now)} m³/s</dd><dt>Highest in next 30 days</dt><dd>${fmtQ(a.main.peak)} m³/s · ${fmtDate(a.main.peak_date)}</dd>
@@ -554,18 +659,22 @@
         </dl>
         <p class="note">Season figures compare this state's recent rain and temperature with the same time of year since 2012 (ERA5 reanalysis). Planting signal: 20 mm in 3 days with no 7-day dry spell in the following 3 weeks.</p>`;
     }
-    $("tab-today").innerHTML = html;
+    if (fold) html += `</details>`;
+    $("tab-today").innerHTML = html; $("tab-today").scrollTop = 0; syncNav();
     $("back").addEventListener("click", () => { S.sel = null; if (spotMarker) map.removeLayer(spotMarker); renderToday(); });
     $("copy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(msg); $("copy").textContent = t.copied; } catch (e) { /* ignore */ } });
     $("spot").addEventListener("click", () => analyseSpot(sel.lat, sel.lon));
     $("lapseGreen").addEventListener("click", () => startLapse("ndvi", sel.lat, sel.lon));
     $("lapseFlood").addEventListener("click", () => startLapse("flood", sel.lat, sel.lon));
-    if (a.main && mp) pointChart("pchart", a.main);
+    if (a.main && mp) {
+      if (fold) $("pdetails").addEventListener("toggle", (e) => { if (e.target.open) pointChart("pchart", a.main); });
+      else pointChart("pchart", a.main);
+    }
   }
   const fmtQ = (q) => q == null ? "–" : Math.round(q).toLocaleString();
 
   function pointChart(canvasId, r) {
-    if (S.charts[canvasId]) S.charts[canvasId].destroy();
+    if (S.charts[canvasId]) { S.charts[canvasId].destroy(); delete S.charts[canvasId]; }
     const c = $(canvasId); if (!c || !window.Chart || !r.q) return;
     const labels = r.q.map((_, i) => fmtDate(addDays(r.t0, i)));
     const ti = r.q.findIndex((_, i) => addDays(r.t0, i) >= today());
@@ -1071,6 +1180,7 @@
     if (name === "replay") renderReplayTab();
     if (name === "model") renderModelTab();
     if (name === "about") renderAbout();
+    syncNav();
   }
   function chartTheme() {
     if (!window.Chart) return;
@@ -1107,6 +1217,7 @@
     }));
     document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
     initSheet();
+    initMobileChrome();
     $("play").addEventListener("click", togglePlay);
     $("rbClose").addEventListener("click", () => { if (S.lapse) stopLapse(); else if (S.replay) exitReplay(); });
     $("rbSlider").addEventListener("input", (e) => { if (S.lapse) { clearTimeout(S.lapse.timer); S.lapse.timer = null; setPlayIcon(false); return lapseFrame(+e.target.value); } stopPlay(); setDay(+e.target.value); });
