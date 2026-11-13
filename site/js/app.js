@@ -359,29 +359,95 @@
     el.querySelectorAll("[data-lga]").forEach((li) => li.addEventListener("click", () => { const f = lgaById(li.dataset.lga); selectLocation(f.lat, f.lon, f, null, true); }));
     el.querySelectorAll("[data-state]").forEach((li) => li.addEventListener("click", () => { const s = S.data.states.find((x) => x.properties.id === li.dataset.state); if (s) map.fitBounds(L.geoJSON(s).getBounds()); }));
   }
+  // Words for the phone layout, in all five languages (Hausa, Yorùbá and Igbo are first drafts awaiting review).
+  const MT = {
+    en: {
+      checking: "Checking the rivers…", calm: "No flood expected in Nigeria in the next 30 days", risk: (n) => `${n} ${n === 1 ? "community" : "communities"} may flood in the next 30 days`,
+      subCalm: "Rivers are at normal levels. Find your area for local rain and farm advice.", subRisk: "Find your area to see if it is one of them, and what to do.",
+      updated: (d) => `Updated ${d} · checked 3 times a day`, find: "Find my area", locate: "Use my location", watch: "Places to watch", seeAll: (n) => `See all ${n} places`,
+      season: "Farming season", inStates: (txt, n, all) => `${txt} in ${n} of ${all} states.`, dry: (n) => `${n} drier than normal.`, hot: (n) => `Heat in ${n}.`,
+      farmBtn: "Farm advice", allStates: (n) => `All ${n} states`, lite: "Low-data version", basic: "Basic phone", story: "2022 floods",
+      nav: { home: "Home", farm: "Farm", replay: "Replay", more: "More" },
+      more: { nema: ["Emergency view", "Ranked list for NEMA, SEMA and NGOs"], model: ["How accurate is it?", "Test results of the flood model"], about: ["About", "Where the data comes from"],
+        lite: ["Low-data version", "Text pages that load on 2G"], ussd: ["Basic-phone menu", "USSD demo, no internet needed"], story: ["2022 floods replayed", "How much warning farmers had"], tour: ["How to use this site", "Short guided tour"] },
+      details: "See river chart and more details", byState: "Planting and rain, state by state",
+      noLoc: "Location is not available on this device. Use Find my area instead.", finding: "Finding your location…", outside: "You seem to be outside Nigeria. Use Find my area instead.", locFail: "Could not get your location. Allow location access, or use Find my area.",
+    },
+    pcm: {
+      checking: "We dey check the rivers…", calm: "Flood no dey expected for Naija for the next 30 days", risk: (n) => `${n} ${n === 1 ? "community" : "communities"} fit flood for the next 30 days`,
+      subCalm: "River dey normal level. Find your area for rain and farm advice.", subRisk: "Find your area make you see if e dey among them, and wetin you go do.",
+      updated: (d) => `Update ${d} · we dey check am 3 times every day`, find: "Find my area", locate: "Use where I dey", watch: "Places wey una suppose watch", seeAll: (n) => `See all ${n} places`,
+      season: "Farm season", inStates: (txt, n, all) => `${txt} for ${n} out of ${all} states.`, dry: (n) => `${n} dry pass normal.`, hot: (n) => `Heat for ${n}.`,
+      farmBtn: "Farm advice", allStates: (n) => `All ${n} states`, lite: "Low-data version", basic: "Small phone", story: "2022 floods",
+      nav: { home: "Home", farm: "Farm", replay: "Replay", more: "More" },
+      more: { nema: ["Emergency view", "List for NEMA, SEMA and NGO"], model: ["How correct e be?", "Test result for the flood model"], about: ["About", "Where the data come from"],
+        lite: ["Low-data version", "Text pages wey dey load for 2G"], ussd: ["Small-phone menu", "USSD demo, no need internet"], story: ["2022 floods replay", "How much warning farmers for get"], tour: ["How to use this site", "Short guide"] },
+      details: "See river chart and more details", byState: "Planting and rain, state by state",
+      noLoc: "Location no dey work for this phone. Use Find my area.", finding: "We dey find where you dey…", outside: "E be like say you no dey Naija. Use Find my area.", locFail: "We no fit get your location. Allow location, or use Find my area.",
+    },
+    ha: {
+      checking: "Ana duba koguna…", calm: "Ba a tsammanin ambaliya a Najeriya cikin kwana 30 masu zuwa", risk: (n) => `Al'ummomi ${n} za su iya fuskantar ambaliya cikin kwana 30 masu zuwa`,
+      subCalm: "Koguna suna matakin da aka saba. Nemi yankinka don shawarwarin ruwan sama da noma.", subRisk: "Nemi yankinka don ganin ko yana cikinsu, da abin da za ka yi.",
+      updated: (d) => `An sabunta ${d} · ana dubawa sau 3 a rana`, find: "Nemi yankina", locate: "Yi amfani da wurina", watch: "Wuraren da za a kula da su", seeAll: (n) => `Duba duka wurare ${n}`,
+      season: "Lokacin noma", inStates: (txt, n, all) => `${txt} a jihohi ${n} cikin ${all}.`, dry: (n) => `${n} sun bushe fiye da yadda aka saba.`, hot: (n) => `Zafi a ${n}.`,
+      farmBtn: "Shawarwarin noma", allStates: (n) => `Duka jihohi ${n}`, lite: "Shafi mai ƙaramin data", basic: "Ƙaramar waya", story: "Ambaliyar 2022",
+      nav: { home: "Gida", farm: "Noma", replay: "Tarihi", more: "Ƙari" },
+      more: { nema: ["Shafin gaggawa", "Jerin wurare don NEMA, SEMA da ƙungiyoyi"], model: ["Yaya daidai yake?", "Sakamakon gwajin hasashen ambaliya"], about: ["Game da", "Inda bayanan suka fito"],
+        lite: ["Shafi mai ƙaramin data", "Shafukan rubutu da ke buɗewa a 2G"], ussd: ["Menu na ƙaramar waya", "Gwajin USSD, ba a buƙatar intanet"], story: ["Ambaliyar 2022 a maimaice", "Gargaɗin da manoma za su samu"], tour: ["Yadda ake amfani da shafin", "Gajeren jagora"] },
+      details: "Duba jadawalin kogi da ƙarin bayani", byState: "Shuka da ruwan sama, jiha bayan jiha",
+      noLoc: "Ba a iya samun wuri a wannan na'ura. Yi amfani da Nemi yankina.", finding: "Ana neman wurinka…", outside: "Da alama ba ka Najeriya. Yi amfani da Nemi yankina.", locFail: "Ba a samu wurinka ba. Ba da izinin wuri, ko yi amfani da Nemi yankina.",
+    },
+    yo: {
+      checking: "À ń ṣàyẹ̀wò àwọn odò…", calm: "A kò retí ìkún omi ní Nàìjíríà ní ọjọ́ 30 tó ń bọ̀", risk: (n) => `Agbègbè ${n} lè ní ìkún omi ní ọjọ́ 30 tó ń bọ̀`,
+      subCalm: "Àwọn odò wà ní ìpele tó yẹ. Wá agbègbè rẹ fún ìmọ̀ràn òjò àti oko.", subRisk: "Wá agbègbè rẹ láti mọ̀ bóyá ó wà lára wọn, àti ohun tí o máa ṣe.",
+      updated: (d) => `A ṣe àtúnṣe ${d} · à ń ṣàyẹ̀wò rẹ̀ ní ìgbà 3 lójúmọ́`, find: "Wá agbègbè mi", locate: "Lo ibi tí mo wà", watch: "Àwọn ibi tó yẹ ká ṣọ́", seeAll: (n) => `Wo gbogbo ibi ${n}`,
+      season: "Àsìkò oko", inStates: (txt, n, all) => `${txt} ní ìpínlẹ̀ ${n} nínú ${all}.`, dry: (n) => `${n} gbẹ ju bó ṣe yẹ lọ.`, hot: (n) => `Ooru ní ${n}.`,
+      farmBtn: "Ìmọ̀ràn oko", allStates: (n) => `Gbogbo ìpínlẹ̀ ${n}`, lite: "Ẹ̀yà data kékeré", basic: "Fóònù kékeré", story: "Ìkún omi 2022",
+      nav: { home: "Ilé", farm: "Oko", replay: "Ìtàn", more: "Síwájú sí i" },
+      more: { nema: ["Ojú-ìwé pàjáwìrì", "Àkójọ fún NEMA, SEMA àti àwọn àjọ"], model: ["Báwo ló ṣe péye tó?", "Àbájáde ìdánwò àsọtẹ́lẹ̀ ìkún omi"], about: ["Nípa", "Ibi tí ìsọfúnni ti wá"],
+        lite: ["Ẹ̀yà data kékeré", "Ojú-ewé ọ̀rọ̀ tó ń ṣí lórí 2G"], ussd: ["Àkójọ fóònù kékeré", "Àpẹẹrẹ USSD, kò nílò íntánẹ́ẹ̀tì"], story: ["Ìkún omi 2022 ní àtúnwò", "Ìkìlọ̀ tí àwọn àgbẹ̀ ìbá ti ní"], tour: ["Bí a ṣe ń lo ojú-òpó yìí", "Ìtọ́sọ́nà kúkúrú"] },
+      details: "Wo àwòrán odò àti àlàyé síwájú sí i", byState: "Gbìngbìn àti òjò, ìpínlẹ̀ kọ̀ọ̀kan",
+      noLoc: "Ibi tí o wà kò ṣeé rí lórí ẹ̀rọ yìí. Lo Wá agbègbè mi.", finding: "À ń wá ibi tí o wà…", outside: "Ó dàbí pé o kò sí ní Nàìjíríà. Lo Wá agbègbè mi.", locFail: "A kò rí ibi tí o wà. Fún wa ní àṣẹ ibi, tàbí lo Wá agbègbè mi.",
+    },
+    ig: {
+      checking: "Anyị na-enyocha osimiri…", calm: "A naghị atụ anya iju mmiri na Naịjirịa n'ụbọchị 30 na-abịa", risk: (n) => `Obodo ${n} nwere ike inwe iju mmiri n'ụbọchị 30 na-abịa`,
+      subCalm: "Osimiri nọ n'ọkwa nkịtị. Chọta ógbè gị maka ndụmọdụ mmiri ozuzo na ugbo.", subRisk: "Chọta ógbè gị ka ịhụ ma ọ nọ n'etiti ha, na ihe ị ga-eme.",
+      updated: (d) => `Emelitere ${d} · a na-enyocha ya ugboro 3 kwa ụbọchị`, find: "Chọta ógbè m", locate: "Jiri ebe m nọ", watch: "Ebe a ga-eleba anya", seeAll: (n) => `Hụ ebe ${n} niile`,
+      season: "Oge ọrụ ugbo", inStates: (txt, n, all) => `${txt} na steeti ${n} n'ime ${all}.`, dry: (n) => `${n} kpọrọ nkụ karịa ka ọ dị na mbụ.`, hot: (n) => `Okpomọkụ na ${n}.`,
+      farmBtn: "Ndụmọdụ ugbo", allStates: (n) => `Steeti ${n} niile`, lite: "Ụdị data nta", basic: "Obere ekwentị", story: "Iju mmiri 2022",
+      nav: { home: "Ụlọ", farm: "Ugbo", replay: "Akụkọ", more: "Ndị ọzọ" },
+      more: { nema: ["Peeji mberede", "Ndepụta maka NEMA, SEMA na otu enyemaka"], model: ["Ọ ziri ezi ole?", "Nsonaazụ nnwale amụma iju mmiri"], about: ["Gbasara", "Ebe data si bịa"],
+        lite: ["Ụdị data nta", "Peeji ederede na-emepe na 2G"], ussd: ["Menu obere ekwentị", "Ngosi USSD, achọghị ịntanetị"], story: ["Iju mmiri 2022 ọzọ", "Ịdọ aka na ntị ndị ọrụ ugbo gaara enweta"], tour: ["Otu esi eji saịtị a", "Ntuziaka dị mkpụmkpụ"] },
+      details: "Hụ eserese osimiri na nkọwa ndị ọzọ", byState: "Ịkụ na mmiri ozuzo, steeti n'otu n'otu",
+      noLoc: "Ebe ị nọ adịghị na ngwaọrụ a. Jiri Chọta ógbè m.", finding: "Anyị na-achọ ebe ị nọ…", outside: "O yiri ka ị nọghị na Naịjirịa. Jiri Chọta ógbè m.", locFail: "Anyị enweghị ike ịchọta ebe ị nọ. Kwe ka anyị hụ ebe ị nọ, ma ọ bụ jiri Chọta ógbè m.",
+    },
+  };
+  const mt = () => MT[S.lang] || MT.en;
+
   // Phones: the answer first, one big way to find your place, and everything else folded away.
   function mobileHome(el, warm, atRisk, states) {
     const t = T(), lt = S.data.latest;
     const top = Object.entries((lt && lt.lgas) || {}).filter(([, v]) => v[0] > 0).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]);
     const worst = top.length ? top[0][1][0] : 0;
     const upd = lt && lt.generated ? fmtDate(lt.generated.slice(0, 10), { weekday: "short", day: "numeric", month: "short" }) : "";
-    const head = !lt ? "Checking the rivers…" : atRisk ? `${atRisk} ${atRisk === 1 ? "community" : "communities"} may flood in the next 30 days` : "No flood expected in Nigeria in the next 30 days";
-    const sub = !lt ? "" : atRisk ? "Find your area to see if it is one of them, and what to do." : "Rivers are at normal levels. Find your area for local rain and farm advice.";
+    const m = mt();
+    const head = !lt ? m.checking : atRisk ? m.risk(atRisk) : m.calm;
+    const sub = !lt ? "" : atRisk ? m.subRisk : m.subCalm;
     // most common season state, as one plain line
     const cnt = {}; states.forEach((s) => { cnt[s.plant] = (cnt[s.plant] || 0) + 1; });
     const main = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
     const dry = states.filter((s) => s.status === "drought" || s.status === "dry").length, hot = states.filter((s) => s.heat).length;
-    let html = warm + `<div class="hero l${worst}"><div class="hero-ic">${worst ? "⚠️" : "✅"}</div><div><b>${esc(head)}</b><span>${esc(sub)}</span>${upd ? `<small>Updated ${esc(upd)} · checked 3 times a day</small>` : ""}</div></div>
-      <div class="bigbtns"><button class="bigbtn" id="mFind">🔍 Find my area</button><button class="bigbtn ghost" id="mLoc">📍 Use my location</button></div>`;
+    let html = warm + `<div class="hero l${worst}"><div class="hero-ic">${worst ? "⚠️" : "✅"}</div><div><b>${esc(head)}</b><span>${esc(sub)}</span>${upd ? `<small>${esc(m.updated(upd))}</small>` : ""}</div></div>
+      <div class="bigbtns"><button class="bigbtn" id="mFind">🔍 ${esc(m.find)}</button><button class="bigbtn ghost" id="mLoc">📍 ${esc(m.locate)}</button></div>`;
     if (top.length) {
-      html += `<h3>Places to watch</h3><ul class="list">${top.slice(0, 5).map(([id, v]) => { const f = lgaById(id); return f ? `<li data-lga="${id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)}</small></span><span class="chip l${v[0]}">${esc(t.lvl[v[0]])}</span></li>` : ""; }).join("")}</ul>`;
-      if (top.length > 5) html += `<button class="linkbtn" id="mAll">See all ${top.length} places →</button>`;
+      html += `<h3>${esc(m.watch)}</h3><ul class="list">${top.slice(0, 5).map(([id, v]) => { const f = lgaById(id); return f ? `<li data-lga="${id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)}</small></span><span class="chip l${v[0]}">${esc(t.lvl[v[0]])}</span></li>` : ""; }).join("")}</ul>`;
+      if (top.length > 5) html += `<button class="linkbtn" id="mAll">${esc(m.seeAll(top.length))} →</button>`;
     }
-    if (main) html += `<div class="season-line"><b>🌾 Farming season</b><span>${esc(t.plant[main[0]] || "")} in ${main[1]} of ${states.length} states.${dry ? ` ${dry} drier than normal.` : ""}${hot ? ` 🔥 Heat in ${hot}.` : ""}</span><button class="linkbtn" id="mFarm">Farm advice →</button></div>`;
+    if (main) html += `<div class="season-line"><b>🌾 ${esc(m.season)}</b><span>${esc(m.inStates(t.plant[main[0]] || "", main[1], states.length))}${dry ? " " + esc(m.dry(dry)) : ""}${hot ? " 🔥 " + esc(m.hot(hot)) : ""}</span><button class="linkbtn" id="mFarm">${esc(m.farmBtn)} →</button></div>`;
     html += lagdoCard(false);
-    if (states.length) html += `<details class="fold"><summary>All ${states.length} states</summary><ul class="list">` +
+    if (states.length) html += `<details class="fold"><summary>${esc(m.allStates(states.length))}</summary><ul class="list">` +
       Object.entries(lt.states).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}</small></span>${chipCol(SEASON_COL[s.status] || SEASON_COL.unknown, t.season[s.status] || s.status)}</li>`).join("") + `</ul></details>`;
-    html += `<div class="minilinks"><a href="lite/${S.lang}/index.html">📶 Low-data version</a><a href="ussd.html">📱 Basic phone</a><a href="story-2022.html">🌾 2022 floods</a></div>`;
+    html += `<div class="minilinks"><a href="lite/${S.lang}/index.html">📶 ${esc(m.lite)}</a><a href="ussd.html">📱 ${esc(m.basic)}</a><a href="story-2022.html">🌾 ${esc(m.story)}</a></div>`;
     el.innerHTML = html; el.scrollTop = 0;
     bindLagdo();
     $("mFind").addEventListener("click", () => { const q = $("q"); q.focus(); q.select(); });
@@ -393,13 +459,13 @@
     syncNav();
   }
   function locateMe() {
-    if (!navigator.geolocation) return toast("Location is not available on this device. Use 🔍 Find my area instead.");
-    toast("Finding your location…");
+    if (!navigator.geolocation) return toast(esc(mt().noLoc));
+    toast(esc(mt().finding));
     navigator.geolocation.getCurrentPosition((p) => {
       const { latitude: la, longitude: lo } = p.coords;
-      if (!lgaAt(la, lo)) return toast("You seem to be outside Nigeria. Use 🔍 Find my area instead.");
+      if (!lgaAt(la, lo)) return toast(esc(mt().outside));
       selectLocation(la, lo, null, null, true);
-    }, () => toast("Could not get your location. Allow location access, or use 🔍 Find my area."), { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+    }, () => toast(esc(mt().locFail)), { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
   }
 
   // ---------- phone chrome: bottom navigation, one Layers button, a More menu ----------
@@ -421,8 +487,10 @@
   }
   function initMobileChrome() {
     const nav = document.createElement("nav"); nav.id = "mnav"; nav.className = "mnav"; nav.setAttribute("aria-label", "Main");
-    const items = [["home", "🏠", "Home"], ["farm", "🌾", "Farm"], ["replay", "⏪", "Replay"], ["more", "☰", "More"]];
-    nav.innerHTML = items.map(([k, ic, n]) => `<button data-go="${k}"><i aria-hidden="true">${ic}</i><span>${n}</span></button>`).join("");
+    const items = [["home", "🏠"], ["farm", "🌾"], ["replay", "⏪"], ["more", "☰"]];
+    nav.innerHTML = items.map(([k, ic]) => `<button data-go="${k}"><i aria-hidden="true">${ic}</i><span></span></button>`).join("");
+    S.onLangNav = () => nav.querySelectorAll("button").forEach((b) => { b.querySelector("span").textContent = mt().nav[b.dataset.go]; });
+    S.onLangNav();
     document.body.appendChild(nav);
     nav.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.go === "more") return openMore(); goTo(b.dataset.go); });
     // Layers: one button that opens the map-layer and base-map choices
@@ -439,10 +507,10 @@
     let m = $("moreMenu");
     if (m) { m.remove(); return; }
     m = document.createElement("div"); m.id = "moreMenu"; m.className = "moremenu";
-    const rows = [["nema", "🚑", "Emergency view", "Ranked list for NEMA, SEMA and NGOs"], ["model", "📊", "How accurate is it?", "Test results of the flood model"], ["about", "ℹ️", "About", "Where the data comes from"],
-      ["@lite/" + S.lang + "/index.html", "📶", "Low-data version", "Text pages that load on 2G"], ["@ussd.html", "📱", "Basic-phone menu", "USSD demo, no internet needed"], ["@story-2022.html", "🌾", "2022 floods replayed", "How much warning farmers had"],
-      ["tour", "❓", "How to use this site", "Short guided tour"]];
-    m.innerHTML = `<div class="mm-card" role="dialog" aria-label="More"><div class="mm-grip"></div>${rows.map(([k, ic, n, d]) => k[0] === "@" ? `<a href="${k.slice(1)}"><i>${ic}</i><span><b>${n}</b><small>${d}</small></span></a>` : `<button data-k="${k}"><i>${ic}</i><span><b>${n}</b><small>${d}</small></span></button>`).join("")}</div>`;
+    const w = mt().more;
+    const rows = [["nema", "🚑", w.nema], ["model", "📊", w.model], ["about", "ℹ️", w.about],
+      ["@lite/" + S.lang + "/index.html", "📶", w.lite], ["@ussd.html", "📱", w.ussd], ["@story-2022.html", "🌾", w.story], ["tour", "❓", w.tour]];
+    m.innerHTML = `<div class="mm-card" role="dialog" aria-label="${esc(mt().nav.more)}"><div class="mm-grip"></div>${rows.map(([k, ic, [n, d]]) => k[0] === "@" ? `<a href="${k.slice(1)}"><i>${ic}</i><span><b>${esc(n)}</b><small>${esc(d)}</small></span></a>` : `<button data-k="${k}"><i>${ic}</i><span><b>${esc(n)}</b><small>${esc(d)}</small></span></button>`).join("")}</div>`;
     document.body.appendChild(m);
     m.addEventListener("click", (e) => {
       const b = e.target.closest("button[data-k]");
@@ -476,7 +544,7 @@
     html += `<h3>🌾 Riverside farms: harvest before the flood</h3>` + (ff.length
       ? `<ul class="list">${ff.slice(0, 25).map(({ f, r }) => `<li data-lga="${f.id}"><span class="nm">${esc(f.name)}<small>${esc(f.state)} · ${esc(r.a.river)} · ${r.a.source === "ml" ? `likely within ${r.a.lead} days` : r.a.days ? `in about ${r.a.days} days` : "now"}</small></span><span class="chip l${r.a.level}">${esc(t.lvl[r.a.level])}</span></li>`).join("")}</ul>`
       : `<p class="small muted">No riverside farming community is expected to flood in the next 30 days. <a href="story-2022.html">See how much warning farmers could have had in 2022 →</a></p>`);
-    html += (MOBILE() ? `<details class="fold"><summary>Planting and rain, state by state</summary>` : `<h3>By state</h3>`) + `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
+    html += (MOBILE() ? `<details class="fold"><summary>${esc(mt().byState)}</summary>` : `<h3>By state</h3>`) + `<ul class="list farm">` + states.map(([sid, s]) => `<li data-state="${sid}"><span class="nm">${esc(s.name)}<small>${esc(t.plant[s.plant] || "")}${s.dry_run ? " · " + esc(t.dry_run(s.dry_run)) : ""}${s.heat ? " · 🔥" : ""}</small></span>
         <span class="mini">${(s.rain_days || []).map((mm) => `<i style="height:${Math.min(100, Math.round(mm * 3))}%" title="${mm} mm"></i>`).join("")}</span></li>`).join("") + `</ul>
       <p class="small muted">Small bars: rain forecast for the next 7 days.</p>` + (MOBILE() ? `</details>` : "");
     const el = $("tab-today"); el.innerHTML = html; el.scrollTop = 0; bindViewSwitch(); syncNav();
@@ -627,7 +695,7 @@
     if (fold) {
       if (S.view !== "farmer" && (farmAdvice(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat) || {}).a) html += farmAdviceCard(sel.lga.id, sel.lga.lat != null ? sel.lga.lat : sel.lat);
       if (S.view !== "farmer" && a.season) html += `<div class="season-line"><b>🌾 ${esc(t.plant[a.season.plant] || "")}</b><span>${esc((t.farm_tip || {})[a.season.plant] || "")}</span></div>`;
-      html += `<details class="fold" id="pdetails"><summary>See river chart and more details</summary>`;
+      html += `<details class="fold" id="pdetails"><summary>${esc(mt().details)}</summary>`;
     }
     if (a.main && mp) {
       html += `<h3>${esc(mp.river)} near ${esc(mp.name)}</h3>
@@ -1197,6 +1265,7 @@
     ["flood", "season", "plant", "heat"].forEach((m) => { $("m_" + m).textContent = t["mode_" + m]; });
     ["today", "replay", "model", "about"].forEach((m) => { $("t_" + m).textContent = t["tab_" + m]; });
     liveBadge(); renderLegend();
+    if (S.onLangNav) S.onLangNav(); if (S.onModeLabel) S.onModeLabel();
     if (!$("replaybar").hidden) { $("rbWorst").textContent = t.worst_btn; $("rbSatText").textContent = t.satellite; if (S.replay) setDay(S.replay.day); }
     const active = document.querySelector(".tabs button.on").dataset.tab;
     if (active === "today") renderToday(); else switchTab(active);
