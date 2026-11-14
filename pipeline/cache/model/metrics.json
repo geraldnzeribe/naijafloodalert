@@ -1,9 +1,9 @@
 {
- "trained": "2026-11-13T10:19+00:00",
- "train_years": "2014-2020",
+ "trained": "2026-11-14T00:31+00:00",
+ "train_years": "2012-2020",
  "test_years": "2021-2026",
  "points": 154,
- "history_avg": 12.26,
+ "history_avg": 14.45,
  "features": [
   "r0",
   "r1",
@@ -28,110 +28,110 @@
  "leads": {
   "3": {
    "watch": {
-    "hit_rate": 0.847,
-    "false_alarm_ratio": 0.11,
-    "csi": 0.767,
+    "hit_rate": 0.828,
+    "false_alarm_ratio": 0.082,
+    "csi": 0.771,
     "auc": 0.99,
-    "brier": 0.0183,
+    "brier": 0.0182,
     "baseline": {
      "hit_rate": 0.802,
      "false_alarm_ratio": 0.069,
      "csi": 0.757,
      "auc": 0.898,
-     "brier": 0.0246
+     "brier": 0.0242
     },
-    "events_test": 31478,
-    "samples_test": 329406,
-    "threshold": 0.475
+    "events_test": 31034,
+    "samples_test": 329560,
+    "threshold": 0.55
    },
    "warning": {
-    "hit_rate": 0.722,
-    "false_alarm_ratio": 0.139,
-    "csi": 0.647,
-    "auc": 0.989,
-    "brier": 0.0096,
+    "hit_rate": 0.724,
+    "false_alarm_ratio": 0.125,
+    "csi": 0.656,
+    "auc": 0.99,
+    "brier": 0.009,
     "baseline": {
-     "hit_rate": 0.697,
-     "false_alarm_ratio": 0.119,
-     "csi": 0.637,
-     "auc": 0.847,
-     "brier": 0.0122
+     "hit_rate": 0.709,
+     "false_alarm_ratio": 0.112,
+     "csi": 0.651,
+     "auc": 0.853,
+     "brier": 0.0113
     },
-    "events_test": 10090,
-    "samples_test": 329406,
+    "events_test": 9752,
+    "samples_test": 329560,
     "threshold": 0.4
    }
   },
   "7": {
    "watch": {
-    "hit_rate": 0.791,
-    "false_alarm_ratio": 0.182,
-    "csi": 0.673,
+    "hit_rate": 0.829,
+    "false_alarm_ratio": 0.243,
+    "csi": 0.655,
     "auc": 0.981,
-    "brier": 0.0317,
+    "brier": 0.0313,
     "baseline": {
-     "hit_rate": 0.674,
-     "false_alarm_ratio": 0.052,
-     "csi": 0.65,
-     "auc": 0.835,
-     "brier": 0.0421
+     "hit_rate": 0.673,
+     "false_alarm_ratio": 0.053,
+     "csi": 0.649,
+     "auc": 0.834,
+     "brier": 0.0417
     },
-    "events_test": 38136,
-    "samples_test": 328790,
-    "threshold": 0.475
+    "events_test": 37621,
+    "samples_test": 328944,
+    "threshold": 0.35
    },
    "warning": {
-    "hit_rate": 0.677,
-    "false_alarm_ratio": 0.297,
-    "csi": 0.527,
-    "auc": 0.98,
-    "brier": 0.0172,
+    "hit_rate": 0.66,
+    "false_alarm_ratio": 0.252,
+    "csi": 0.54,
+    "auc": 0.982,
+    "brier": 0.016,
     "baseline": {
-     "hit_rate": 0.527,
-     "false_alarm_ratio": 0.099,
-     "csi": 0.498,
-     "auc": 0.762,
-     "brier": 0.022
+     "hit_rate": 0.542,
+     "false_alarm_ratio": 0.094,
+     "csi": 0.513,
+     "auc": 0.77,
+     "brier": 0.0204
     },
-    "events_test": 13644,
-    "samples_test": 328790,
-    "threshold": 0.275
+    "events_test": 13024,
+    "samples_test": 328944,
+    "threshold": 0.3
    }
   },
   "14": {
    "watch": {
-    "hit_rate": 0.793,
-    "false_alarm_ratio": 0.242,
-    "csi": 0.633,
+    "hit_rate": 0.785,
+    "false_alarm_ratio": 0.236,
+    "csi": 0.632,
     "auc": 0.974,
-    "brier": 0.0451,
+    "brier": 0.0448,
     "baseline": {
-     "hit_rate": 0.551,
+     "hit_rate": 0.55,
      "false_alarm_ratio": 0.042,
-     "csi": 0.538,
-     "auc": 0.774,
-     "brier": 0.068
+     "csi": 0.537,
+     "auc": 0.773,
+     "brier": 0.0672
     },
-    "events_test": 47103,
-    "samples_test": 327712,
+    "events_test": 46520,
+    "samples_test": 327866,
     "threshold": 0.45
    },
    "warning": {
-    "hit_rate": 0.679,
-    "false_alarm_ratio": 0.384,
-    "csi": 0.477,
-    "auc": 0.971,
-    "brier": 0.0264,
+    "hit_rate": 0.581,
+    "false_alarm_ratio": 0.301,
+    "csi": 0.465,
+    "auc": 0.973,
+    "brier": 0.0255,
     "baseline": {
-     "hit_rate": 0.393,
-     "false_alarm_ratio": 0.081,
-     "csi": 0.38,
-     "auc": 0.695,
-     "brier": 0.0366
+     "hit_rate": 0.402,
+     "false_alarm_ratio": 0.08,
+     "csi": 0.389,
+     "auc": 0.7,
+     "brier": 0.0344
     },
-    "events_test": 18670,
-    "samples_test": 327712,
-    "threshold": 0.25
+    "events_test": 17823,
+    "samples_test": 327866,
+    "threshold": 0.35
    }
   }
  }
