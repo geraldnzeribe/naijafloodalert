@@ -1,6 +1,11 @@
 {
  "runs": [
   {
+   "t": "2026-11-14T10:27+00:00",
+   "calls": 2980,
+   "points": 154
+  },
+  {
    "t": "2026-11-14T00:35+00:00",
    "calls": 2945,
    "points": 154
@@ -157,43 +162,15 @@
   }
  ],
  "last": {
-  "started": "2026-11-14T00:22+00:00",
+  "started": "2026-11-14T10:16+00:00",
   "network_complete": true,
   "points": 154,
-  "daily": "fetched",
+  "daily": "reused",
   "backfill": {
-   "flood_chunks": 7,
-   "wx_chunks": 1,
-   "complete_years_flood": 14.454545454545455,
-   "complete_years_wx": 14.0
-  },
-  "trained": {
-   "trained": "2026-11-14T00:31+00:00",
-   "train_years": "2012-2020",
-   "test_years": "2021-2026",
-   "points": 154,
-   "history_avg": 14.45,
-   "features": [
-    "r0",
-    "r1",
-    "r3",
-    "r7",
-    "r14",
-    "d1",
-    "d7",
-    "max30",
-    "doy_s",
-    "doy_c",
-    "nb_r0",
-    "nb_d7",
-    "rain30",
-    "rain7",
-    "w0",
-    "wmax7",
-    "warn_over_watch",
-    "severe_over_warn"
-   ],
-   "calibration_year": 2020
+   "flood_chunks": 9,
+   "wx_chunks": 3,
+   "complete_years_flood": 15.0,
+   "complete_years_wx": 14.81081081081081
   },
   "levels": {
    "0": 154,
@@ -218,8 +195,8 @@
    2025,
    2026
   ],
-  "api_calls_used": 2945,
-  "finished": "2026-11-14T00:35+00:00"
+  "api_calls_used": 2980,
+  "finished": "2026-11-14T10:27+00:00"
  },
  "badge": {
   "schemaVersion": 1,
